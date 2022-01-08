@@ -143,17 +143,52 @@ const prettyPrintBoard = (board) => {
   }
 };
 
+function tallySunken(sunkenShips) {
+  return sunkenShips.map(({ counter, size }, i) => {
+    return {
+      shipNo: i,
+      size,
+      isSunk: size !== 0 && counter === size ? true : false,
+    };
+  });
+}
+
+function mapSunkShips(enemyPositions, coords) {
+  const mappedHits = enemyPositions.map((ship) => {
+    let counter = 0;
+    let size = 0;
+    ship.forEach((pos) =>
+      coords.find(({ x, y }) => {
+        pos.x === x && pos.y === y ? counter++ : null;
+        size = ship.length;
+      })
+    );
+    return { counter, size };
+  });
+  return mappedHits;
+}
+
+function fillTileWithHitMarker(y, x, newFill, board) {
+  const row = [...board[y]];
+  row[x] = newFill;
+  let temp = [...board];
+  temp[y] = row;
+  return temp;
+}
+
 function gameState() {
+  let isPlayersTurn = true;
   let playerTurns = 0;
-  let shipsSunk = [];
+  let cpuTurns = 0;
+  const shipsSunk = { player: [], enemy: [] };
   const shipsHit = { player: [], enemy: [] };
   const positions = { player: [], enemy: [] };
 
-  function updateTurns() {
-    playerTurns++;
+  function updateTurns(whosTurn) {
+    whosTurn === "player" ? playerTurns++ : cpuTurns++;
   }
-  function updateSunk(sunkShips) {
-    shipsSunk = [...sunkShips];
+  function updateSunk(sunkShips, name) {
+    shipsSunk[name] = [...sunkShips];
   }
   function updateShipsHit(coords, name) {
     shipsHit[name].push(coords);
@@ -162,10 +197,20 @@ function gameState() {
     positions[name].push(item);
   }
   function retrieve() {
-    return { playerTurns, shipsHit, positions, shipsSunk };
+    return { playerTurns, shipsHit, positions, shipsSunk, isPlayersTurn };
+  }
+  function swapTurn() {
+    isPlayersTurn = !isPlayersTurn;
   }
 
-  return { updateTurns, updateShipsHit, updatePositions, updateSunk, retrieve };
+  return {
+    updateTurns,
+    updateShipsHit,
+    updatePositions,
+    updateSunk,
+    swapTurn,
+    retrieve,
+  };
 }
 
 async function setupGame() {
@@ -176,52 +221,76 @@ async function setupGame() {
     const enemyBoard = enBoard || populateBoard(state, "enemy");
     const guessingBoard = guessBoard || createEmptyBoard();
 
+    const playersTurn = state.retrieve().isPlayersTurn;
+    const evaluationBoard = playersTurn ? enemyBoard : playerBoard;
+    const evaluateAgainst = playersTurn ? "enemy" : "player";
+    // console.log(evaluateAgainst);
     const sunkenShips = mapSunkShips(
-      state.retrieve().positions["enemy"],
-      state.retrieve().shipsHit
+      state.retrieve().positions[evaluateAgainst],
+      state.retrieve().shipsHit[evaluateAgainst]
     );
-    // console.log(sunkenShips);
     const sunkShips = tallySunken(sunkenShips);
     state.updateSunk(sunkShips);
-    // console.log(sunkShips);
     if (sunkShips.every(({ isSunk }) => isSunk === true)) {
       playerHasWon = true;
       return;
     }
-    print("\nempty board");
-    prettyPrintBoard(guessingBoard);
-    // print("player board is:");
-    // prettyPrintBoard(playerBoard);
-    print("enemy board is:");
-    prettyPrintBoard(enemyBoard);
-    const { y, x } = await gatherInputs(enemyBoard);
 
+    console.log(playersTurn ? "player" : "ai");
+
+    print("\nYour guess board");
+    prettyPrintBoard(guessingBoard);
+    print("\nYour board is:");
+    prettyPrintBoard(playerBoard);
+
+    //If it is the players turn, we are evaluating the shots fired on the rival board. and updating that turn's (player/ai) board
+
+    let y, x;
+    if (playersTurn) ({ y, x } = await gatherInputs(evaluationBoard));
+    else {
+      y = Math.floor(Math.random() * evaluationBoard.length);
+      x = Math.floor(Math.random() * evaluationBoard[y].length);
+    }
     if (typeof x === "string") {
       //end game
-      console.log("\nthanks for playing ");
+      print("\nThanks for playing");
       return;
     }
-    const { hit, val } = checkForHit(y, x, enemyBoard);
+    const { hit, val } = checkForHit(y, x, evaluationBoard);
     let fill = "";
     console.clear();
+    // NEED A WAY TO BLOCK THE PROCESS DURING ENEMY TURN SO PLAYER CAN SEE THEIR MOVES INREALTIME RATHER THAN ALL AT ONCE
     if (hit) {
+      print(playersTurn ? "You land a hit!" : "The enemy lands a hit!");
       fill = "\x1b[41m" + val + "\x1b[0m";
       if (
-        !state.retrieve().shipsHit["enemy"].length ||
+        !state.retrieve().shipsHit[evaluateAgainst].length ||
         !state
           .retrieve()
-          .shipsHit["enemy"].find((coords) => coords.x === x && coords.y === y)
+          .shipsHit[evaluateAgainst].find(
+            (coords) => coords.x === x && coords.y === y
+          )
       ) {
-        state.updateShipsHit({ y, x }, "enemy");
+        state.updateShipsHit({ y, x }, evaluateAgainst);
       } else {
-        console.log("you already hit that");
+        print("You've already shot a cannonball there, try another space.");
       }
     } else {
+      //turn player shot misses
+      print(
+        playersTurn ? "" : "the enemy shot at x: " + (x + 1) + " y: " + (y + 1)
+      );
+      state.swapTurn();
       fill = "\x1b[43m" + val + "\x1b[0m";
     }
     state.updateTurns();
-    const newGuessingBoard = fillTileWithHitMarker(y, x, fill, guessingBoard);
-    return await gameLoop(playerBoard, enemyBoard, newGuessingBoard);
+    const newPlayerBoard = !playersTurn
+      ? fillTileWithHitMarker(y, x, fill, playerBoard)
+      : playerBoard;
+    const newGuessingBoard = playersTurn
+      ? fillTileWithHitMarker(y, x, fill, guessingBoard)
+      : guessingBoard;
+    return await gameLoop(newPlayerBoard, enemyBoard, newGuessingBoard);
   }
   await gameLoop();
   if (playerHasWon) {
@@ -246,39 +315,6 @@ async function setupGame() {
   }
 }
 
-function tallySunken(sunkenShips) {
-  return sunkenShips.map(({ counter, size }, i) => {
-    return {
-      shipNo: i,
-      size,
-      isSunk: size !== 0 && counter === size ? true : false,
-    };
-  });
-}
-
-function mapSunkShips(enemyPositions, coords) {
-  const mappedHits = enemyPositions.map((ship) => {
-    let counter = 0;
-    let size = 0;
-    ship.forEach((pos) =>
-      coords["enemy"].find(({ x, y }) => {
-        pos.x === x && pos.y === y ? counter++ : null;
-        size = ship.length;
-      })
-    );
-    return { counter, size };
-  });
-  return mappedHits;
-}
-
-function fillTileWithHitMarker(y, x, newFill, board) {
-  const row = [...board[y]];
-  row[x] = newFill;
-  let temp = [...board];
-  temp[y] = row;
-  return temp;
-}
-
 function gatherInputs(board) {
   let x, y;
   print('\nType "end" to end the game');
@@ -286,7 +322,7 @@ function gatherInputs(board) {
     rl.question("Pick a letter: ", (char) => {
       if (char === "end") return resolve({ x: char, y: char });
       x = char.toLowerCase().charCodeAt() - 97;
-      if (x >= 0 && x < board[0].length) {
+      if (char.length === 1 && x >= 0 && x < board[0].length) {
         // print(x, char);
         rl.question("Pick a number: ", (num) => {
           y = parseInt(num) - 1;
@@ -312,6 +348,6 @@ function checkForHit(y, x, boardToCheck) {
 }
 
 print(
-  "Hello And welcome to battleship, the board is automatically generated rn \n"
+  "\nHello And welcome to battleship, the boards are automatically generated currently.\nThe board up top tracks where all the shots you fire on your enemy land.\nRed colored tiles indicate a hit, the number represents the size of the battleship.\n\n(A red 4 tile represents a hit on a battleship that's four tiles of size, either horizontal or veritcal)"
 );
 setupGame();
