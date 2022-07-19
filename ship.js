@@ -216,7 +216,10 @@ function gameState() {
 async function setupGame() {
   const state = gameState();
   let playerHasWon = false;
+  let gameHasEnded = false;
+
   async function gameLoop(plBoard, enBoard, guessBoard) {
+    console.clear();
     const playerBoard = plBoard || populateBoard(state, "player");
     const enemyBoard = enBoard || populateBoard(state, "enemy");
     const guessingBoard = guessBoard || createEmptyBoard();
@@ -224,24 +227,35 @@ async function setupGame() {
     const playersTurn = state.retrieve().isPlayersTurn;
     const evaluationBoard = playersTurn ? enemyBoard : playerBoard;
     const evaluateAgainst = playersTurn ? "enemy" : "player";
-    // console.log(evaluateAgainst);
+    const currentTurn = playersTurn ? "player" : "enemy";
+    // console.log(evaluateAgainst)
+    //By updating the sunkenShips on the start of each gameLoop, the printed board will not reflect changes untill its time for the player's next turn.
     const sunkenShips = mapSunkShips(
       state.retrieve().positions[evaluateAgainst],
       state.retrieve().shipsHit[evaluateAgainst]
     );
     const sunkShips = tallySunken(sunkenShips);
-    state.updateSunk(sunkShips);
+    state.updateSunk(sunkShips, evaluateAgainst);
     if (sunkShips.every(({ isSunk }) => isSunk === true)) {
       playerHasWon = true;
-      return;
+      gameHasEnded = true;
+      return true;
     }
-
-    console.log(playersTurn ? "player" : "ai");
-
-    print("\nYour guess board");
-    prettyPrintBoard(guessingBoard);
-    print("\nYour board is:");
-    prettyPrintBoard(playerBoard);
+    function printBoards(debug = false) {
+      print("\nYour guess board");
+      prettyPrintBoard(guessingBoard);
+      if (debug) {
+        print("\nYour ENEMY'S is:");
+        prettyPrintBoard(enemyBoard);
+      } else {
+        print("\nYour board is:");
+        prettyPrintBoard(playerBoard);
+      }
+    }
+    console.log(playersTurn ? "Player's turn" : "AI turn");
+    // Board state shown while player plays their turn move.
+    // this function call will not print on enemy's turn
+    printBoards();
 
     //If it is the players turn, we are evaluating the shots fired on the rival board. and updating that turn's (player/ai) board
 
@@ -253,15 +267,20 @@ async function setupGame() {
     }
     if (typeof x === "string") {
       //end game
+      gameHasEnded = true;
       print("\nThanks for playing");
-      return;
+      return true;
     }
     const { hit, val } = checkForHit(y, x, evaluationBoard);
     let fill = "";
     console.clear();
     // NEED A WAY TO BLOCK THE PROCESS DURING ENEMY TURN SO PLAYER CAN SEE THEIR MOVES INREALTIME RATHER THAN ALL AT ONCE
     if (hit) {
-      print(playersTurn ? "You land a hit!" : "The enemy lands a hit!");
+      print(
+        playersTurn
+          ? `You land a hit at Y: ${y + 1}, X: ${x + 1}`
+          : `The enemy lands a hit at Y: ${y + 1}, X: ${x + 1}`
+      );
       fill = "\x1b[41m" + val + "\x1b[0m";
       if (
         !state.retrieve().shipsHit[evaluateAgainst].length ||
@@ -278,41 +297,66 @@ async function setupGame() {
     } else {
       //turn player shot misses
       print(
-        playersTurn ? "" : "the enemy shot at x: " + (x + 1) + " y: " + (y + 1)
+        playersTurn
+          ? `Your shot misses at Y: ${y + 1}, X: ${x + 1}`
+          : `The enemy's shot misses at Y: ${y + 1}, X: ${x + 1}`
       );
       state.swapTurn();
       fill = "\x1b[43m" + val + "\x1b[0m";
     }
-    state.updateTurns();
+    state.updateTurns(currentTurn);
     const newPlayerBoard = !playersTurn
       ? fillTileWithHitMarker(y, x, fill, playerBoard)
       : playerBoard;
     const newGuessingBoard = playersTurn
       ? fillTileWithHitMarker(y, x, fill, guessingBoard)
       : guessingBoard;
-    return await gameLoop(newPlayerBoard, enemyBoard, newGuessingBoard);
+
+    //printBoards() here because without it, the function moves out to the outter body before the setTimeout executes.
+    // board printed right after either player or the AI finish their moves
+    // After the AI finishes their move, this function call is the one that persists on screen
+    printBoards();
+
+    //by enveloping gameLoop in a setTimeout to delay by `n` seconds, the promise guarantees it will not fire untill completion of the timeout AND we will not prematurely return a non promise based value, which will continue thread of execturion after first return
+    return new Promise((res) => {
+      setTimeout(async () => {
+        res(await gameLoop(newPlayerBoard, enemyBoard, newGuessingBoard));
+      }, 3000);
+    });
   }
   await gameLoop();
-  if (playerHasWon) {
-    print(
-      `Good job\nAfter ${
-        state.retrieve().playerTurns
-      } mighty blows,\nYou've taken out ${
-        state.retrieve().shipsHit["enemy"].length
-      }\nThey've gone down yarr.`
-    );
-  } else {
-    print(
-      `Nice try\nAfter ${
-        state.retrieve().playerTurns
-      } mighty blows,\nYou've taken out ${state
-        .retrieve()
-        .shipsSunk.reduce(
-          (acc, curr) => (curr.isSunk ? (acc += 1) : 0),
-          0
-        )}\nThey remain.`
-    );
+  if (gameHasEnded) {
+    if (playerHasWon) {
+      print(
+        `Good job\nAfter ${
+          state.retrieve().playerTurns
+        } mighty blows,\nYou've taken out ${state
+          .retrieve()
+          .shipsHit.enemy.reduce(
+            (acc, curr) => (curr.isSunk ? (acc += 1) : acc),
+            0
+          )}\nThey've gone down yarr.`
+      );
+    } else {
+      print(
+        `Nice try\nAfter ${
+          state.retrieve().playerTurns
+        } mighty blows,\nYou've taken out ${state
+          .retrieve()
+          .shipsSunk.enemy.reduce(
+            (acc, curr) => (curr.isSunk ? (acc += 1) : acc),
+            0
+          )}\nThey remain.`
+      );
+    }
   }
+  /*
+  !!!! once the game goes past one turn, the thread of execution continues on and does the rest of 
+  this outter body function which isnt what we want, completing the game just skips out on stats stuff. 
+
+  create gameHasEnded:boolean, if bool === true, display these messages else void to avoid skipping to these
+  outter body if statements during the period inbetween setTimeout and await gameLoop
+  */
 }
 
 function gatherInputs(board) {
