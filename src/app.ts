@@ -4,19 +4,63 @@ const rl = readline.createInterface({
   output: process.stdout,
 });
 
-function print(message) {
+/*
+ ========================
+        TYPES
+ ========================
+*/
+type BoardRow = [
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number
+];
+type Board = [
+  BoardRow,
+  BoardRow,
+  BoardRow,
+  BoardRow,
+  BoardRow,
+  BoardRow,
+  BoardRow,
+  BoardRow,
+  BoardRow,
+  BoardRow
+];
+
+type CompassDirectionSingles = "north" | "south" | "east" | "west";
+type CompassDirection = [CompassDirectionSingles];
+type XYCoords = { x: number; y: number };
+/*
+ ========================
+        TYPES
+ ========================
+*/
+
+function print(message: string) {
   return console.log(message);
 }
 
-function createEmptyBoard(ships) {
-  if (!ships) return new Array(10).fill(new Array(10).fill(0));
+function createEmptyBoard(size: number = 10) {
+  return new Array(10).fill(new Array(10).fill(0)) as Board;
 }
 
-function populateBoard({ updatePositions }, name) {
+function populateBoard(
+  {
+    updatePositions,
+  }: { updatePositions: (path: XYCoords, name: "player" | "enemy") => void },
+  name: "player" | "enemy"
+) {
   //make ships
   let board = createEmptyBoard();
   const sizes = [5, 4, 3, 3, 2];
-
+  let a = board[1][0];
   sizes.forEach((size) => {
     const getXY = () => {
       const y = Math.floor(Math.random() * board.length);
@@ -38,23 +82,21 @@ function populateBoard({ updatePositions }, name) {
         board[y] = [...board[y]];
         board[y][x] = shipTOP;
         const directions = ascertainDirections({ x, y }, board, size);
-        const validMoves = Object.entries(directions).filter((v) =>
-          v.includes(true)
-        );
+        const validMoves = Object.entries(directions).filter((v) => v);
         if (!validMoves.length) {
           // print("potential fuckup");
           board[y][x] = initialPlot;
           initialPlot = 1;
           continue;
         }
-
-        const randomDirection =
-          validMoves[Math.floor(Math.random() * validMoves.length)][0];
+        //randomDirection : CompassDirection
+        const randomDirection = validMoves[
+          Math.floor(Math.random() * validMoves.length)
+        ][0] as CompassDirectionSingles;
         let [newBoard, path] = fillWithShipTiles(
           { x, y },
           board,
           size,
-          shipTile,
           randomDirection
         );
         updatePositions(path, name);
@@ -66,9 +108,14 @@ function populateBoard({ updatePositions }, name) {
   return board;
 }
 
-function fillWithShipTiles({ x, y }, board, size, tile, direction) {
+function fillWithShipTiles(
+  { x, y }: XYCoords,
+  board: Board,
+  size: number,
+  direction: "north" | "south" | "east" | "west"
+): [Board, XYCoords] {
   const path = [{ y, x }];
-  let tempBoard = [...board];
+  let tempBoard = [...board] as Board;
   let counter = size;
   const startPointer = direction === "north" || direction === "south" ? y : x;
   for (
@@ -83,23 +130,29 @@ function fillWithShipTiles({ x, y }, board, size, tile, direction) {
       direction === "north" || direction === "south" ? x : i;
     const verticalPointer =
       direction === "north" || direction === "south" ? i : y;
-    const tempRow = [...tempBoard[verticalPointer]];
-    tempRow[horizontalPointer] = tile;
+    const tempRow = [...tempBoard[verticalPointer]] as BoardRow;
+    tempRow[horizontalPointer] = size;
     tempBoard[verticalPointer] = [...tempRow];
     path.push({ y: verticalPointer, x: horizontalPointer });
   }
   return [tempBoard, path];
 }
 
-function ascertainDirections({ x, y }, board, size) {
+function ascertainDirections(
+  { x, y }: { x: number; y: number },
+  board: Board,
+  size: number
+) {
+  type MoveableDirectionState = null | true | false;
   const directions = {
-    north: null,
-    south: null,
-    east: null,
-    west: null,
+    north: null as MoveableDirectionState,
+    south: null as MoveableDirectionState,
+    east: null as MoveableDirectionState,
+    west: null as MoveableDirectionState,
   };
 
-  Object.keys(directions).forEach((direction) => {
+  const compassDirections = Object.keys(directions) as CompassDirection;
+  compassDirections.forEach((direction) => {
     let counter = size;
     const tempBoard = [...board];
     const pointer = direction === "north" || direction === "south" ? y : x;
@@ -131,7 +184,7 @@ function ascertainDirections({ x, y }, board, size) {
   return directions;
 }
 
-const prettyPrintBoard = (board) => {
+const prettyPrintBoard = (board: Board) => {
   print("\n     A B C D E F G H I J");
   let lineNum = 1;
   for (const line of board) {
@@ -234,6 +287,8 @@ async function setupGame() {
       state.retrieve().positions[evaluateAgainst],
       state.retrieve().shipsHit[evaluateAgainst]
     );
+
+    console.log(state.retrieve().positions);
     const sunkShips = tallySunken(sunkenShips);
     state.updateSunk(sunkShips, evaluateAgainst);
     if (sunkShips.every(({ isSunk }) => isSunk === true)) {
