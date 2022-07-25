@@ -1,4 +1,4 @@
-const readline = require("readline");
+import readline = require("readline");
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -9,6 +9,8 @@ const rl = readline.createInterface({
         TYPES
  ========================
 */
+type TurnPlayer = "player" | "enemy";
+
 type BoardRow = [
   number,
   number,
@@ -37,6 +39,7 @@ type Board = [
 type CompassDirectionSingles = "north" | "south" | "east" | "west";
 type CompassDirection = [CompassDirectionSingles];
 type XYCoords = { x: number; y: number };
+type ShipPlotPoints = XYCoords[];
 /*
  ========================
         TYPES
@@ -47,20 +50,20 @@ function print(message: string) {
   return console.log(message);
 }
 
-function createEmptyBoard(size: number = 10) {
+function createEmptyBoard(size = 10) {
   return new Array(10).fill(new Array(10).fill(0)) as Board;
 }
 
 function populateBoard(
+  board: Board,
   {
     updatePositions,
-  }: { updatePositions: (path: XYCoords, name: "player" | "enemy") => void },
+  }: { updatePositions: (path: ShipPlotPoints, name: TurnPlayer) => void },
   name: "player" | "enemy"
 ) {
-  //make ships
-  let board = createEmptyBoard();
+  //make empty board [[0x10]x10]
+  // let board = createEmptyBoard();
   const sizes = [5, 4, 3, 3, 2];
-  let a = board[1][0];
   sizes.forEach((size) => {
     const getXY = () => {
       const y = Math.floor(Math.random() * board.length);
@@ -89,17 +92,17 @@ function populateBoard(
           initialPlot = 1;
           continue;
         }
-        //randomDirection : CompassDirection
-        const randomDirection = validMoves[
-          Math.floor(Math.random() * validMoves.length)
-        ][0] as CompassDirectionSingles;
-        let [newBoard, path] = fillWithShipTiles(
+        //Pick a random valid direction
+        const randomDirection = Math.floor(Math.random() * validMoves.length);
+        const buildDirection = validMoves[randomDirection];
+
+        const [newBoard, shipPlotPoints] = buildShips(
           { x, y },
           board,
           size,
-          randomDirection
+          buildDirection[0] as CompassDirectionSingles
         );
-        updatePositions(path, name);
+        updatePositions(shipPlotPoints, name);
         board = newBoard;
         break;
       }
@@ -108,14 +111,14 @@ function populateBoard(
   return board;
 }
 
-function fillWithShipTiles(
+function buildShips(
   { x, y }: XYCoords,
   board: Board,
   size: number,
   direction: "north" | "south" | "east" | "west"
-): [Board, XYCoords] {
-  const path = [{ y, x }];
-  let tempBoard = [...board] as Board;
+): [Board, ShipPlotPoints] {
+  const shipPlots: ShipPlotPoints = [{ x, y }];
+  const tempBoard = [...board] as Board;
   let counter = size;
   const startPointer = direction === "north" || direction === "south" ? y : x;
   for (
@@ -131,18 +134,15 @@ function fillWithShipTiles(
     const verticalPointer =
       direction === "north" || direction === "south" ? i : y;
     const tempRow = [...tempBoard[verticalPointer]] as BoardRow;
+    //replaces the individual tile with a custom color tile if wanted
     tempRow[horizontalPointer] = size;
     tempBoard[verticalPointer] = [...tempRow];
-    path.push({ y: verticalPointer, x: horizontalPointer });
+    shipPlots.push({ x: horizontalPointer, y: verticalPointer });
   }
-  return [tempBoard, path];
+  return [tempBoard, shipPlots];
 }
 
-function ascertainDirections(
-  { x, y }: { x: number; y: number },
-  board: Board,
-  size: number
-) {
+function ascertainDirections({ x, y }: XYCoords, board: Board, size: number) {
   type MoveableDirectionState = null | true | false;
   const directions = {
     north: null as MoveableDirectionState,
@@ -206,7 +206,7 @@ function tallySunken(sunkenShips) {
   });
 }
 
-function mapSunkShips(enemyPositions, coords) {
+function mapSunkShips(enemyPositions: ShipPlotPoints[], coords: xy) {
   const mappedHits = enemyPositions.map((ship) => {
     let counter = 0;
     let size = 0;
@@ -224,29 +224,33 @@ function mapSunkShips(enemyPositions, coords) {
 function fillTileWithHitMarker(y, x, newFill, board) {
   const row = [...board[y]];
   row[x] = newFill;
-  let temp = [...board];
+  const temp = [...board];
   temp[y] = row;
   return temp;
 }
-
 function gameState() {
   let isPlayersTurn = true;
   let playerTurns = 0;
   let cpuTurns = 0;
   const shipsSunk = { player: [], enemy: [] };
   const shipsHit = { player: [], enemy: [] };
-  const positions = { player: [], enemy: [] };
+  const positions = {
+    player: [] as ShipPlotPoints[],
+    enemy: [] as ShipPlotPoints[],
+  };
 
-  function updateTurns(whosTurn) {
+  function updateTurns(whosTurn: TurnPlayer) {
     whosTurn === "player" ? playerTurns++ : cpuTurns++;
   }
-  function updateSunk(sunkShips, name) {
+  function updateSunk(sunkShips, name: TurnPlayer) {
     shipsSunk[name] = [...sunkShips];
   }
-  function updateShipsHit(coords, name) {
+  function updateShipsHit(coords, name: TurnPlayer) {
     shipsHit[name].push(coords);
   }
-  function updatePositions(item, name) {
+  //[{x,y} x 2-5]
+
+  function updatePositions(item: ShipPlotPoints, name: TurnPlayer) {
     positions[name].push(item);
   }
   function retrieve() {
@@ -271,10 +275,16 @@ async function setupGame() {
   let playerHasWon = false;
   let gameHasEnded = false;
 
-  async function gameLoop(plBoard, enBoard, guessBoard) {
+  async function gameLoop(
+    plBoard: void | Board,
+    enBoard: void | Board,
+    guessBoard: void | Board
+  ) {
     console.clear();
-    const playerBoard = plBoard || populateBoard(state, "player");
-    const enemyBoard = enBoard || populateBoard(state, "enemy");
+    const playerBoard =
+      plBoard || populateBoard(createEmptyBoard(), state, "player");
+    const enemyBoard =
+      enBoard || populateBoard(createEmptyBoard(), state, "enemy");
     const guessingBoard = guessBoard || createEmptyBoard();
 
     const playersTurn = state.retrieve().isPlayersTurn;
@@ -288,7 +298,7 @@ async function setupGame() {
       state.retrieve().shipsHit[evaluateAgainst]
     );
 
-    console.log(state.retrieve().positions);
+    // console.log(state.retrieve().positions);
     const sunkShips = tallySunken(sunkenShips);
     state.updateSunk(sunkShips, evaluateAgainst);
     if (sunkShips.every(({ isSunk }) => isSunk === true)) {
