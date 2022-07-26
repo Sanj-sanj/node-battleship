@@ -12,16 +12,16 @@ const rl = readline.createInterface({
 type TurnPlayer = "player" | "enemy";
 
 type BoardRow = [
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string
 ];
 type Board = [
   BoardRow,
@@ -40,6 +40,13 @@ type CompassDirectionSingles = "north" | "south" | "east" | "west";
 type CompassDirection = [CompassDirectionSingles];
 type XYCoords = { x: number; y: number };
 type ShipPlotPoints = XYCoords[];
+
+type ShipTilesHitAndSizeTuple = { counter: number; size: number };
+type ShipState = {
+  shipNo: number;
+  size: number;
+  isSunk: boolean;
+};
 /*
  ========================
         TYPES
@@ -51,7 +58,7 @@ function print(message: string) {
 }
 
 function createEmptyBoard(size = 10) {
-  return new Array(10).fill(new Array(10).fill(0)) as Board;
+  return new Array(10).fill(new Array(10).fill("0")) as Board;
 }
 
 function populateBoard(
@@ -71,24 +78,24 @@ function populateBoard(
       return [y, x];
     };
     const shipTile = size;
-    const shipTOP = size;
+    const shipInitialPlot = size;
     // const shipTile = "\x1b[35m" + size + "\x1b[0m";
-    // const shipTOP = "\x1b[46m" + size + "\x1b[0m";
+    // const shipInitialPlot = "\x1b[46m" + size + "\x1b[0m";
     let initialPlot = 1;
     let x, y;
 
     while (initialPlot !== 0) {
       [y, x] = getXY();
-      initialPlot = board[y][x];
+      initialPlot = parseInt(board[y][x]);
       // print("this is initial before its alterd", initialPlot);
       if (initialPlot === 0) {
         board[y] = [...board[y]];
-        board[y][x] = shipTOP;
+        board[y][x] = shipInitialPlot.toString();
         const directions = ascertainDirections({ x, y }, board, size);
         const validMoves = Object.entries(directions).filter((v) => v);
         if (!validMoves.length) {
           // print("potential fuckup");
-          board[y][x] = initialPlot;
+          board[y][x] = initialPlot.toString();
           initialPlot = 1;
           continue;
         }
@@ -135,7 +142,7 @@ function buildShips(
       direction === "north" || direction === "south" ? i : y;
     const tempRow = [...tempBoard[verticalPointer]] as BoardRow;
     //replaces the individual tile with a custom color tile if wanted
-    tempRow[horizontalPointer] = size;
+    tempRow[horizontalPointer] = size.toString();
     tempBoard[verticalPointer] = [...tempRow];
     shipPlots.push({ x: horizontalPointer, y: verticalPointer });
   }
@@ -167,7 +174,7 @@ function ascertainDirections({ x, y }: XYCoords, board: Board, size: number) {
       const yIndex = direction === "north" || direction === "south" ? i : y;
       const xIndex = direction === "north" || direction === "south" ? x : i;
       try {
-        if (tempBoard[yIndex][xIndex] !== 0) {
+        if (tempBoard[yIndex][xIndex] !== "0") {
           directions[direction] = false;
           break;
         }
@@ -196,7 +203,7 @@ const prettyPrintBoard = (board: Board) => {
   }
 };
 
-function tallySunken(sunkenShips) {
+function tallySunken(sunkenShips: ShipTilesHitAndSizeTuple[]) {
   return sunkenShips.map(({ counter, size }, i) => {
     return {
       shipNo: i,
@@ -206,7 +213,7 @@ function tallySunken(sunkenShips) {
   });
 }
 
-function mapSunkShips(enemyPositions: ShipPlotPoints[], coords: xy) {
+function mapSunkShips(enemyPositions: ShipPlotPoints[], coords: XYCoords[]) {
   const mappedHits = enemyPositions.map((ship) => {
     let counter = 0;
     let size = 0;
@@ -221,8 +228,12 @@ function mapSunkShips(enemyPositions: ShipPlotPoints[], coords: xy) {
   return mappedHits;
 }
 
-function fillTileWithHitMarker(y, x, newFill, board) {
-  const row = [...board[y]];
+function fillTileWithHitMarker(
+  { y, x }: XYCoords,
+  newFill: string,
+  board: Board
+) {
+  const row = [...board[y]] as BoardRow;
   row[x] = newFill;
   const temp = [...board];
   temp[y] = row;
@@ -232,8 +243,8 @@ function gameState() {
   let isPlayersTurn = true;
   let playerTurns = 0;
   let cpuTurns = 0;
-  const shipsSunk = { player: [], enemy: [] };
-  const shipsHit = { player: [], enemy: [] };
+  const shipsSunk = { player: [] as ShipState[], enemy: [] as ShipState[] };
+  const shipsHit = { player: [] as XYCoords[], enemy: [] as XYCoords[] };
   const positions = {
     player: [] as ShipPlotPoints[],
     enemy: [] as ShipPlotPoints[],
@@ -242,10 +253,10 @@ function gameState() {
   function updateTurns(whosTurn: TurnPlayer) {
     whosTurn === "player" ? playerTurns++ : cpuTurns++;
   }
-  function updateSunk(sunkShips, name: TurnPlayer) {
+  function updateSunk(sunkShips: ShipState[], name: TurnPlayer) {
     shipsSunk[name] = [...sunkShips];
   }
-  function updateShipsHit(coords, name: TurnPlayer) {
+  function updateShipsHit(coords: XYCoords, name: TurnPlayer) {
     shipsHit[name].push(coords);
   }
   //[{x,y} x 2-5]
@@ -323,7 +334,6 @@ async function setupGame() {
     printBoards();
 
     //If it is the players turn, we are evaluating the shots fired on the rival board. and updating that turn's (player/ai) board
-
     let y, x;
     if (playersTurn) ({ y, x } = await gatherInputs(evaluationBoard));
     else {
@@ -371,10 +381,10 @@ async function setupGame() {
     }
     state.updateTurns(currentTurn);
     const newPlayerBoard = !playersTurn
-      ? fillTileWithHitMarker(y, x, fill, playerBoard)
+      ? fillTileWithHitMarker({ x, y }, fill, playerBoard)
       : playerBoard;
     const newGuessingBoard = playersTurn
-      ? fillTileWithHitMarker(y, x, fill, guessingBoard)
+      ? fillTileWithHitMarker({ x, y }, fill, guessingBoard)
       : guessingBoard;
 
     //printBoards() here because without it, the function moves out to the outter body before the setTimeout executes.
@@ -424,12 +434,13 @@ async function setupGame() {
   */
 }
 
-function gatherInputs(board) {
+function gatherInputs(board: Board) {
   let x, y;
   print('\nType "end" to end the game');
   return new Promise((resolve, reject) => {
     rl.question("Pick a letter: ", (char) => {
       if (char === "end") return resolve({ x: char, y: char });
+      //HERE WE ARE NEXT NEXT N EXR NEXT
       x = char.toLowerCase().charCodeAt() - 97;
       if (char.length === 1 && x >= 0 && x < board[0].length) {
         // print(x, char);
