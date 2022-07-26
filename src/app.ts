@@ -72,31 +72,33 @@ function populateBoard(
   // let board = createEmptyBoard();
   const sizes = [5, 4, 3, 3, 2];
   sizes.forEach((size) => {
-    const getXY = () => {
+    const getRandomInitialPlot = (): [number, number] => {
       const y = Math.floor(Math.random() * board.length);
       const x = Math.floor(Math.random() * board[y].length);
       return [y, x];
     };
     const shipTile = size;
-    const shipInitialPlot = size;
     // const shipTile = "\x1b[35m" + size + "\x1b[0m";
     // const shipInitialPlot = "\x1b[46m" + size + "\x1b[0m";
-    let initialPlot = 1;
-    let x, y;
+    let initialTileToCheck = 1;
+    const coords = { x: 0, y: 0 };
+    let { x, y } = coords;
 
-    while (initialPlot !== 0) {
-      [y, x] = getXY();
-      initialPlot = parseInt(board[y][x]);
+    while (initialTileToCheck !== 0) {
+      [y, x] = getRandomInitialPlot();
+      initialTileToCheck = parseInt(board[y][x]);
+      const currentlyCheckingTile = board[y][x];
       // print("this is initial before its alterd", initialPlot);
-      if (initialPlot === 0) {
+      if (currentlyCheckingTile === "0") {
         board[y] = [...board[y]];
-        board[y][x] = shipInitialPlot.toString();
+        board[y][x] = shipTile.toString();
         const directions = ascertainDirections({ x, y }, board, size);
         const validMoves = Object.entries(directions).filter((v) => v);
+        console.log(validMoves);
         if (!validMoves.length) {
           // print("potential fuckup");
-          board[y][x] = initialPlot.toString();
-          initialPlot = 1;
+          board[y][x] = initialTileToCheck.toString();
+          initialTileToCheck = 1;
           continue;
         }
         //Pick a random valid direction
@@ -124,6 +126,7 @@ function buildShips(
   size: number,
   direction: "north" | "south" | "east" | "west"
 ): [Board, ShipPlotPoints] {
+  // y = parseInt(y), x = parseInt(x)
   const shipPlots: ShipPlotPoints = [{ x, y }];
   const tempBoard = [...board] as Board;
   let counter = size;
@@ -235,9 +238,9 @@ function fillTileWithHitMarker(
 ) {
   const row = [...board[y]] as BoardRow;
   row[x] = newFill;
-  const temp = [...board];
-  temp[y] = row;
-  return temp;
+  const newBoard = [...board] as Board;
+  newBoard[y] = row;
+  return newBoard;
 }
 function gameState() {
   let isPlayersTurn = true;
@@ -334,19 +337,30 @@ async function setupGame() {
     printBoards();
 
     //If it is the players turn, we are evaluating the shots fired on the rival board. and updating that turn's (player/ai) board
-    let y, x;
-    if (playersTurn) ({ y, x } = await gatherInputs(evaluationBoard));
-    else {
+    const initialCoords: XYCoords = { x: 0, y: 0 };
+    let { y, x } = initialCoords;
+    if (playersTurn) {
+      const result = await gatherPlayersInputs(evaluationBoard, initialCoords);
+      console.log("im here", result);
+      if (typeof result === "object") {
+        (y = result.y), (x = result.x);
+      } else if (typeof result === "string" && result === "end") {
+        //end game logic here?
+        gameHasEnded = true;
+        print("\nThanks for playing");
+        return true;
+      }
+    } else {
       y = Math.floor(Math.random() * evaluationBoard.length);
       x = Math.floor(Math.random() * evaluationBoard[y].length);
     }
-    if (typeof x === "string") {
-      //end game
-      gameHasEnded = true;
-      print("\nThanks for playing");
-      return true;
-    }
-    const { hit, val } = checkForHit(y, x, evaluationBoard);
+    // if (typeof x === "string") {
+    //   //end game
+    //   gameHasEnded = true;
+    //   print("\nThanks for playing");
+    //   return true;
+    // }
+    const { hit, val } = checkForHit({ y, x }, evaluationBoard);
     let fill = "";
     console.clear();
     // NEED A WAY TO BLOCK THE PROCESS DURING ENEMY TURN SO PLAYER CAN SEE THEIR MOVES INREALTIME RATHER THAN ALL AT ONCE
@@ -407,7 +421,7 @@ async function setupGame() {
           state.retrieve().playerTurns
         } mighty blows,\nYou've taken out ${state
           .retrieve()
-          .shipsHit.enemy.reduce(
+          .shipsSunk.enemy.reduce(
             (acc, curr) => (curr.isSunk ? (acc += 1) : acc),
             0
           )}\nThey've gone down yarr.`
@@ -434,14 +448,19 @@ async function setupGame() {
   */
 }
 
-function gatherInputs(board: Board) {
-  let x, y;
+function gatherPlayersInputs(
+  board: Board,
+  coords: XYCoords
+): Promise<XYCoords | string> {
+  // const coords: XYCoords =  {x : 0, y: 0}
+  let { x, y } = coords;
   print('\nType "end" to end the game');
-  return new Promise((resolve, reject) => {
+
+  return new Promise<XYCoords | string>((resolve, reject) => {
     rl.question("Pick a letter: ", (char) => {
-      if (char === "end") return resolve({ x: char, y: char });
+      if (char === "end") resolve(char);
       //HERE WE ARE NEXT NEXT N EXR NEXT
-      x = char.toLowerCase().charCodeAt() - 97;
+      x = char.toLowerCase().charCodeAt(0) - 97;
       if (char.length === 1 && x >= 0 && x < board[0].length) {
         // print(x, char);
         rl.question("Pick a number: ", (num) => {
@@ -457,12 +476,15 @@ function gatherInputs(board: Board) {
       }
     });
   })
-    .then((coordinates) => coordinates)
-    .catch(() => gatherInputs(board));
+    .then((coordinates) => {
+      console.log(coordinates);
+      return coordinates;
+    })
+    .catch(() => gatherPlayersInputs(board, coords));
 }
 
-function checkForHit(y, x, boardToCheck) {
-  return boardToCheck[y][x] === 0
+function checkForHit({ y, x }: XYCoords, boardToCheck: Board) {
+  return boardToCheck[y][x] === "0"
     ? { hit: false, val: boardToCheck[y][x] }
     : { hit: true, val: boardToCheck[y][x] };
 }
