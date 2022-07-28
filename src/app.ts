@@ -45,6 +45,7 @@ type ShipTilesHitAndSizeTuple = { counter: number; size: number };
 type ShipState = {
   shipNo: number;
   size: number;
+  shotsTaken: number;
   isSunk: boolean;
 };
 /*
@@ -63,9 +64,7 @@ function createEmptyBoard(size = 10) {
 
 function populateBoard(
   board: Board,
-  {
-    updatePositions,
-  }: { updatePositions: (path: ShipPlotPoints, name: TurnPlayer) => void },
+  updatePositions: (path: ShipPlotPoints, name: TurnPlayer) => void,
   name: "player" | "enemy"
 ) {
   //make empty board [[0x10]x10]
@@ -94,7 +93,6 @@ function populateBoard(
         board[y][x] = shipTile.toString();
         const directions = ascertainDirections({ x, y }, board, size);
         const validMoves = Object.entries(directions).filter((v) => v);
-        console.log(validMoves);
         if (!validMoves.length) {
           // print("potential fuckup");
           board[y][x] = initialTileToCheck.toString();
@@ -211,6 +209,7 @@ function tallySunken(sunkenShips: ShipTilesHitAndSizeTuple[]) {
     return {
       shipNo: i,
       size,
+      shotsTaken: counter,
       isSunk: size !== 0 && counter === size ? true : false,
     };
   });
@@ -231,13 +230,9 @@ function mapSunkShips(enemyPositions: ShipPlotPoints[], coords: XYCoords[]) {
   return mappedHits;
 }
 
-function fillTileWithHitMarker(
-  { y, x }: XYCoords,
-  newFill: string,
-  board: Board
-) {
+function fillTileWithHitMarker({ y, x }: XYCoords, tile: string, board: Board) {
   const row = [...board[y]] as BoardRow;
-  row[x] = newFill;
+  row[x] = tile;
   const newBoard = [...board] as Board;
   newBoard[y] = row;
   return newBoard;
@@ -246,41 +241,53 @@ function gameState() {
   let isPlayersTurn = true;
   let playerTurns = 0;
   let cpuTurns = 0;
-  const shipsSunk = { player: [] as ShipState[], enemy: [] as ShipState[] };
+  const shipsState = { player: [] as ShipState[], enemy: [] as ShipState[] };
   const shipsHit = { player: [] as XYCoords[], enemy: [] as XYCoords[] };
+  const shotsFiredHistory = {
+    player: [] as XYCoords[],
+    enemy: [] as XYCoords[],
+  };
   const positions = {
     player: [] as ShipPlotPoints[],
     enemy: [] as ShipPlotPoints[],
   };
 
-  function updateTurns(whosTurn: TurnPlayer) {
+  function checkIfPreviouslyHitTile({ x, y }: XYCoords, name: TurnPlayer) {
+    return shotsFiredHistory[name].some(
+      (coord) => coord.x === x && coord.y === y
+    );
+  }
+  function updateShotsFiredHistory({ x, y }: XYCoords, name: TurnPlayer) {
+    shotsFiredHistory[name].push({ x, y });
+  }
+  function incrementTurnCounter(whosTurn: TurnPlayer) {
     whosTurn === "player" ? playerTurns++ : cpuTurns++;
   }
-  function updateSunk(sunkShips: ShipState[], name: TurnPlayer) {
-    shipsSunk[name] = [...sunkShips];
+  function updateShipStates(sunkShips: ShipState[], name: TurnPlayer) {
+    shipsState[name] = [...sunkShips];
   }
   function updateShipsHit(coords: XYCoords, name: TurnPlayer) {
     shipsHit[name].push(coords);
   }
-  //[{x,y} x 2-5]
-
   function updatePositions(item: ShipPlotPoints, name: TurnPlayer) {
     positions[name].push(item);
-  }
-  function retrieve() {
-    return { playerTurns, shipsHit, positions, shipsSunk, isPlayersTurn };
   }
   function swapTurn() {
     isPlayersTurn = !isPlayersTurn;
   }
+  function get() {
+    return { playerTurns, shipsHit, positions, shipsState, isPlayersTurn };
+  }
 
   return {
-    updateTurns,
+    checkIfPreviouslyHitTile,
+    updateShotsFiredHistory,
+    incrementTurnCounter,
     updateShipsHit,
     updatePositions,
-    updateSunk,
+    updateShipStates,
     swapTurn,
-    retrieve,
+    get,
   };
 }
 
@@ -296,25 +303,26 @@ async function setupGame() {
   ) {
     console.clear();
     const playerBoard =
-      plBoard || populateBoard(createEmptyBoard(), state, "player");
+      plBoard ||
+      populateBoard(createEmptyBoard(), state.updatePositions, "player");
     const enemyBoard =
-      enBoard || populateBoard(createEmptyBoard(), state, "enemy");
+      enBoard ||
+      populateBoard(createEmptyBoard(), state.updatePositions, "enemy");
     const guessingBoard = guessBoard || createEmptyBoard();
 
-    const playersTurn = state.retrieve().isPlayersTurn;
+    const playersTurn = state.get().isPlayersTurn;
     const evaluationBoard = playersTurn ? enemyBoard : playerBoard;
     const evaluateAgainst = playersTurn ? "enemy" : "player";
-    const currentTurn = playersTurn ? "player" : "enemy";
+    const turnPlayer = playersTurn ? "player" : "enemy";
     // console.log(evaluateAgainst)
     //By updating the sunkenShips on the start of each gameLoop, the printed board will not reflect changes untill its time for the player's next turn.
     const sunkenShips = mapSunkShips(
-      state.retrieve().positions[evaluateAgainst],
-      state.retrieve().shipsHit[evaluateAgainst]
+      state.get().positions[evaluateAgainst],
+      state.get().shipsHit[evaluateAgainst]
     );
-
-    // console.log(state.retrieve().positions);
     const sunkShips = tallySunken(sunkenShips);
-    state.updateSunk(sunkShips, evaluateAgainst);
+    state.updateShipStates(sunkShips, evaluateAgainst);
+
     if (sunkShips.every(({ isSunk }) => isSunk === true)) {
       playerHasWon = true;
       gameHasEnded = true;
@@ -341,10 +349,9 @@ async function setupGame() {
     let { y, x } = initialCoords;
     if (playersTurn) {
       const result = await gatherPlayersInputs(evaluationBoard, initialCoords);
-      console.log("im here", result);
       if (typeof result === "object") {
         (y = result.y), (x = result.x);
-      } else if (typeof result === "string" && result === "end") {
+      } else if (result === "end") {
         //end game logic here?
         gameHasEnded = true;
         print("\nThanks for playing");
@@ -354,46 +361,46 @@ async function setupGame() {
       y = Math.floor(Math.random() * evaluationBoard.length);
       x = Math.floor(Math.random() * evaluationBoard[y].length);
     }
-    // if (typeof x === "string") {
-    //   //end game
-    //   gameHasEnded = true;
-    //   print("\nThanks for playing");
-    //   return true;
-    // }
-    const { hit, val } = checkForHit({ y, x }, evaluationBoard);
-    let fill = "";
+
+    // UTILS ===================================
+    const red = (tile: string) => "\x1b[41m" + tile + "\x1b[0m";
+    const yellow = (tile: string) => "\x1b[43m" + tile + "\x1b[0m";
+    // UTILS ===================================
+
+    const { hit, tile } = checkForHit({ y, x }, evaluationBoard);
+    const repeatShot = state.checkIfPreviouslyHitTile({ x, y }, turnPlayer);
+    let fill = tile;
+
     console.clear();
-    // NEED A WAY TO BLOCK THE PROCESS DURING ENEMY TURN SO PLAYER CAN SEE THEIR MOVES INREALTIME RATHER THAN ALL AT ONCE
-    if (hit) {
-      print(
-        playersTurn
-          ? `You land a hit at Y: ${y + 1}, X: ${x + 1}`
-          : `The enemy lands a hit at Y: ${y + 1}, X: ${x + 1}`
-      );
-      fill = "\x1b[41m" + val + "\x1b[0m";
-      if (
-        !state.retrieve().shipsHit[evaluateAgainst].length ||
-        !state
-          .retrieve()
-          .shipsHit[evaluateAgainst].find(
-            (coords) => coords.x === x && coords.y === y
-          )
-      ) {
-        state.updateShipsHit({ y, x }, evaluateAgainst);
-      } else {
-        print("You've already shot a cannonball there, try another space.");
-      }
+    if (repeatShot && !hit && turnPlayer === "player") {
+      print("You've already shot a cannonball there, try another space.");
+      fill = yellow(tile);
+    } else if (repeatShot && hit && turnPlayer === "player") {
+      print("You've already shot a cannonball there, try another space.");
+      fill = red(tile);
     } else {
-      //turn player shot misses
-      print(
-        playersTurn
-          ? `Your shot misses at Y: ${y + 1}, X: ${x + 1}`
-          : `The enemy's shot misses at Y: ${y + 1}, X: ${x + 1}`
-      );
-      state.swapTurn();
-      fill = "\x1b[43m" + val + "\x1b[0m";
+      state.updateShotsFiredHistory({ x, y }, turnPlayer);
+      if (hit) {
+        state.updateShipsHit({ x, y }, turnPlayer);
+        print(
+          playersTurn
+            ? `You land a hit at Y: ${y + 1}, X: ${x + 1}`
+            : `The enemy lands a hit at Y: ${y + 1}, X: ${x + 1}`
+        );
+        fill = red(tile);
+      } else {
+        //turn player shot misses
+        print(
+          playersTurn
+            ? `Your shot misses at Y: ${y + 1}, X: ${x + 1}`
+            : `The enemy's shot misses at Y: ${y + 1}, X: ${x + 1}`
+        );
+        state.swapTurn();
+        fill = yellow(tile);
+      }
+      state.incrementTurnCounter(turnPlayer);
     }
-    state.updateTurns(currentTurn);
+
     const newPlayerBoard = !playersTurn
       ? fillTileWithHitMarker({ x, y }, fill, playerBoard)
       : playerBoard;
@@ -402,15 +409,15 @@ async function setupGame() {
       : guessingBoard;
 
     //printBoards() here because without it, the function moves out to the outter body before the setTimeout executes.
-    // board printed right after either player or the AI finish their moves
-    // After the AI finishes their move, this function call is the one that persists on screen
+    // board printed right after either player or the AI finish their moves and persists during the timeout for the new board.
+    // After the turnPlayer finishes their move, this function call is the one that persists on screen
     printBoards();
 
     //by enveloping gameLoop in a setTimeout to delay by `n` seconds, the promise guarantees it will not fire untill completion of the timeout AND we will not prematurely return a non promise based value, which will continue thread of execturion after first return
     return new Promise((res) => {
       setTimeout(async () => {
         res(await gameLoop(newPlayerBoard, enemyBoard, newGuessingBoard));
-      }, 3000);
+      }, 2500);
     });
   }
   await gameLoop();
@@ -418,10 +425,10 @@ async function setupGame() {
     if (playerHasWon) {
       print(
         `Good job\nAfter ${
-          state.retrieve().playerTurns
+          state.get().playerTurns
         } mighty blows,\nYou've taken out ${state
-          .retrieve()
-          .shipsSunk.enemy.reduce(
+          .get()
+          .shipsState.enemy.reduce(
             (acc, curr) => (curr.isSunk ? (acc += 1) : acc),
             0
           )}\nThey've gone down yarr.`
@@ -429,44 +436,34 @@ async function setupGame() {
     } else {
       print(
         `Nice try\nAfter ${
-          state.retrieve().playerTurns
+          state.get().playerTurns
         } mighty blows,\nYou've taken out ${state
-          .retrieve()
-          .shipsSunk.enemy.reduce(
+          .get()
+          .shipsState.enemy.reduce(
             (acc, curr) => (curr.isSunk ? (acc += 1) : acc),
             0
           )}\nThey remain.`
       );
     }
   }
-  /*
-  !!!! once the game goes past one turn, the thread of execution continues on and does the rest of 
-  this outter body function which isnt what we want, completing the game just skips out on stats stuff. 
-
-  create gameHasEnded:boolean, if bool === true, display these messages else void to avoid skipping to these
-  outter body if statements during the period inbetween setTimeout and await gameLoop
-  */
 }
 
 function gatherPlayersInputs(
   board: Board,
   coords: XYCoords
 ): Promise<XYCoords | string> {
-  // const coords: XYCoords =  {x : 0, y: 0}
   let { x, y } = coords;
   print('\nType "end" to end the game');
 
   return new Promise<XYCoords | string>((resolve, reject) => {
     rl.question("Pick a letter: ", (char) => {
-      if (char === "end") resolve(char);
-      //HERE WE ARE NEXT NEXT N EXR NEXT
+      if (char === "end") return resolve(char);
       x = char.toLowerCase().charCodeAt(0) - 97;
       if (char.length === 1 && x >= 0 && x < board[0].length) {
-        // print(x, char);
         rl.question("Pick a number: ", (num) => {
           y = parseInt(num) - 1;
           if (y >= 0 && y < board.length) {
-            resolve({ y, x });
+            return resolve({ y, x });
           } else {
             reject(print("Number not in range try again."));
           }
@@ -477,7 +474,6 @@ function gatherPlayersInputs(
     });
   })
     .then((coordinates) => {
-      console.log(coordinates);
       return coordinates;
     })
     .catch(() => gatherPlayersInputs(board, coords));
@@ -485,8 +481,8 @@ function gatherPlayersInputs(
 
 function checkForHit({ y, x }: XYCoords, boardToCheck: Board) {
   return boardToCheck[y][x] === "0"
-    ? { hit: false, val: boardToCheck[y][x] }
-    : { hit: true, val: boardToCheck[y][x] };
+    ? { hit: false, tile: boardToCheck[y][x] }
+    : { hit: true, tile: boardToCheck[y][x] };
 }
 
 print(
