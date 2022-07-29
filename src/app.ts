@@ -10,6 +10,7 @@ const rl = readline.createInterface({
  ========================
 */
 type TurnPlayer = "player" | "enemy";
+type TurnOpponent = "player" | "enemy";
 
 type BoardRow = [
   string,
@@ -92,22 +93,23 @@ function populateBoard(
         board[y] = [...board[y]];
         board[y][x] = shipTile.toString();
         const directions = ascertainDirections({ x, y }, board, size);
-        const validMoves = Object.entries(directions).filter((v) => v);
-        if (!validMoves.length) {
+        const validDirections = Object.entries(directions).filter((v) => v[1]);
+        if (!validDirections.length) {
           // print("potential fuckup");
           board[y][x] = initialTileToCheck.toString();
           initialTileToCheck = 1;
           continue;
         }
         //Pick a random valid direction
-        const randomDirection = Math.floor(Math.random() * validMoves.length);
-        const buildDirection = validMoves[randomDirection];
+        const buildDirection = validDirections[
+          Math.floor(Math.random() * validDirections.length)
+        ][0] as CompassDirectionSingles;
 
         const [newBoard, shipPlotPoints] = buildShips(
           { x, y },
           board,
           size,
-          buildDirection[0] as CompassDirectionSingles
+          buildDirection
         );
         updatePositions(shipPlotPoints, name);
         board = newBoard;
@@ -162,7 +164,7 @@ function ascertainDirections({ x, y }: XYCoords, board: Board, size: number) {
   const compassDirections = Object.keys(directions) as CompassDirection;
   compassDirections.forEach((direction) => {
     let counter = size;
-    const tempBoard = [...board];
+    const tempBoard = [...board].map((row) => row.map((n) => n));
     const pointer = direction === "north" || direction === "south" ? y : x;
     for (
       let i =
@@ -266,7 +268,7 @@ function gameState() {
   function updateShipStates(sunkShips: ShipState[], name: TurnPlayer) {
     shipsState[name] = [...sunkShips];
   }
-  function updateShipsHit(coords: XYCoords, name: TurnPlayer) {
+  function updateShipsHit(coords: XYCoords, name: TurnOpponent) {
     shipsHit[name].push(coords);
   }
   function updatePositions(item: ShipPlotPoints, name: TurnPlayer) {
@@ -312,16 +314,17 @@ async function setupGame() {
 
     const playersTurn = state.get().isPlayersTurn;
     const evaluationBoard = playersTurn ? enemyBoard : playerBoard;
-    const evaluateAgainst = playersTurn ? "enemy" : "player";
+    const turnOpponent = playersTurn ? "enemy" : "player";
     const turnPlayer = playersTurn ? "player" : "enemy";
-    // console.log(evaluateAgainst)
+    const gameRenderMS = 2250;
+
     //By updating the sunkenShips on the start of each gameLoop, the printed board will not reflect changes untill its time for the player's next turn.
     const sunkenShips = mapSunkShips(
-      state.get().positions[evaluateAgainst],
-      state.get().shipsHit[evaluateAgainst]
+      state.get().positions[turnOpponent],
+      state.get().shipsHit[turnOpponent]
     );
     const sunkShips = tallySunken(sunkenShips);
-    state.updateShipStates(sunkShips, evaluateAgainst);
+    state.updateShipStates(sunkShips, turnOpponent);
 
     if (sunkShips.every(({ isSunk }) => isSunk === true)) {
       playerHasWon = true;
@@ -329,20 +332,20 @@ async function setupGame() {
       return true;
     }
     function printBoards(debug = false) {
-      print("\nYour guess board");
-      prettyPrintBoard(guessingBoard);
       if (debug) {
         print("\nYour ENEMY'S is:");
         prettyPrintBoard(enemyBoard);
       } else {
-        print("\nYour board is:");
-        prettyPrintBoard(playerBoard);
+        print("\nYour guess board");
+        prettyPrintBoard(guessingBoard);
       }
+      print("\nYour board is:");
+      prettyPrintBoard(playerBoard);
     }
-    console.log(playersTurn ? "Player's turn" : "AI turn");
+    print(playersTurn ? "Player's turn" : "AI turn");
     // Board state shown while player plays their turn move.
     // this function call will not print on enemy's turn
-    printBoards();
+    printBoards(true);
 
     //If it is the players turn, we are evaluating the shots fired on the rival board. and updating that turn's (player/ai) board
     const initialCoords: XYCoords = { x: 0, y: 0 };
@@ -372,16 +375,16 @@ async function setupGame() {
     let fill = tile;
 
     console.clear();
-    if (repeatShot && !hit && turnPlayer === "player") {
+    if (!hit && repeatShot && turnPlayer === "player") {
       print("You've already shot a cannonball there, try another space.");
       fill = yellow(tile);
-    } else if (repeatShot && hit && turnPlayer === "player") {
+    } else if (hit && repeatShot && turnPlayer === "player") {
       print("You've already shot a cannonball there, try another space.");
       fill = red(tile);
     } else {
       state.updateShotsFiredHistory({ x, y }, turnPlayer);
       if (hit) {
-        state.updateShipsHit({ x, y }, turnPlayer);
+        state.updateShipsHit({ x, y }, turnOpponent);
         print(
           playersTurn
             ? `You land a hit at Y: ${y + 1}, X: ${x + 1}`
@@ -417,11 +420,12 @@ async function setupGame() {
     return new Promise((res) => {
       setTimeout(async () => {
         res(await gameLoop(newPlayerBoard, enemyBoard, newGuessingBoard));
-      }, 2500);
+      }, gameRenderMS);
     });
   }
   await gameLoop();
   if (gameHasEnded) {
+    //below logic  shold become a return statement or change this fnc return statement
     if (playerHasWon) {
       print(
         `Good job\nAfter ${
@@ -446,6 +450,8 @@ async function setupGame() {
       );
     }
   }
+
+  return state.get().shipsState;
 }
 
 function gatherPlayersInputs(
@@ -485,7 +491,21 @@ function checkForHit({ y, x }: XYCoords, boardToCheck: Board) {
     : { hit: true, tile: boardToCheck[y][x] };
 }
 
-print(
-  "\nHello And welcome to battleship, the boards are automatically generated currently.\nThe board up top tracks where all the shots you fire on your enemy land.\nRed colored tiles indicate a hit, the number represents the size of the battleship.\n\n(A red 4 tile represents a hit on a battleship that's four tiles of size, either horizontal or veritcal)"
-);
-setupGame();
+function initiateGameTitle() {
+  print(
+    "\nHello And welcome to battleship, the boards are automatically generated currently.\nThe board up top tracks where all the shots you fire on your enemy land.\nRed colored tiles indicate a hit, the number represents the size of the battleship.\n\n(A red 4 tile represents a hit on a battleship that's four tiles of size, either horizontal or veritcal)"
+  );
+
+  const shipStates = new Promise<
+    Promise<{ player: ShipState[]; enemy: ShipState[] }>
+  >((res) => {
+    setTimeout(() => res(setupGame()), 5000);
+  })
+    .then((val) => {
+      console.log("we will change up the return value of setupGame()");
+      console.log(val);
+    })
+    .catch((err) => console.log("Something happened", err));
+}
+
+initiateGameTitle();
