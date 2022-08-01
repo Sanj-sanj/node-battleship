@@ -1,9 +1,9 @@
-import readline = require("readline");
+import inquirer, { Answers, Inquirer } from "inquirer";
+import readline from "readline";
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
 });
-
 /*
  ========================
         TYPES
@@ -49,6 +49,10 @@ type ShipState = {
   shotsTaken: number;
   isSunk: boolean;
 };
+
+interface InquirerTitleSelectAnswers extends Answers {
+  titleSelection: GameTitleChoices;
+}
 /*
  ========================
         TYPES
@@ -398,9 +402,9 @@ async function setupGame() {
             ? `Your shot misses at Y: ${y + 1}, X: ${x + 1}`
             : `The enemy's shot misses at Y: ${y + 1}, X: ${x + 1}`
         );
-        state.swapTurn();
         fill = yellow(tile);
       }
+      state.swapTurn();
       state.incrementTurnCounter(turnPlayer);
     }
 
@@ -491,21 +495,59 @@ function checkForHit({ y, x }: XYCoords, boardToCheck: Board) {
     : { hit: true, tile: boardToCheck[y][x] };
 }
 
-function initiateGameTitle() {
+async function initiateApp() {
   print(
-    "\nHello And welcome to battleship, the boards are automatically generated currently.\nThe board up top tracks where all the shots you fire on your enemy land.\nRed colored tiles indicate a hit, the number represents the size of the battleship.\n\n(A red 4 tile represents a hit on a battleship that's four tiles of size, either horizontal or veritcal)"
+    "\nHello And welcome to battleship\nEach board are automatically generated currently.\nThe board up top tracks where all the shots you fire on your enemy land.\nRed colored tiles indicate a hit, the number represents the size of the battleship.\n\n(A red 4 tile represents a hit on a battleship that's four tiles of size, either horizontal or veritcal)"
   );
 
-  const shipStates = new Promise<
-    Promise<{ player: ShipState[]; enemy: ShipState[] }>
-  >((res) => {
-    setTimeout(() => res(setupGame()), 5000);
-  })
-    .then((val) => {
-      console.log("we will change up the return value of setupGame()");
-      console.log(val);
-    })
-    .catch((err) => console.log("Something happened", err));
+  return await gameMenuSelect();
+}
+function exitGame(n = 3) {
+  let timer = n;
+  print("The game will end in: ");
+  setInterval(() => {
+    print(timer.toString());
+    timer--;
+  }, 1000);
+  setTimeout(() => process.kill(process.pid), (n + 1) * 1000);
 }
 
-initiateGameTitle();
+type GameTitleChoices =
+  | "Start Game"
+  | "Load Game*"
+  | "Highscores*"
+  | "Instructions"
+  | "Quit Application";
+
+async function gameMenuSelect() {
+  let result;
+
+  type InquirerQuestionMenuSelect = {
+    type: "list";
+    name: "titleSelection";
+    message: "please select an option";
+    choices: GameTitleChoices[];
+  };
+  const titleChoices: [InquirerQuestionMenuSelect] = [
+    {
+      type: "list",
+      name: "titleSelection",
+      message: "please select an option",
+      choices: [
+        "Start Game",
+        "Load Game*",
+        "Highscores*",
+        "Instructions",
+        "Quit Application",
+      ],
+    },
+  ];
+  return (await inquirer.prompt(titleChoices).then((response) => {
+    return response;
+  })) as InquirerTitleSelectAnswers;
+}
+
+const res = initiateApp();
+res.finally(() => {});
+
+setupGame();
