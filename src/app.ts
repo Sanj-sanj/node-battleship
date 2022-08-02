@@ -468,14 +468,13 @@ async function setupGame() {
   return state.get().shipsState;
 }
 
-type ValidatorLetter = (value: string) => boolean | string;
-type ValidatorNumber = (value: number) => boolean | string;
+type ValidGameInputTypes = (value: string | number) => boolean | string;
 
 interface InquirerPlayerInputs extends Question {
   type: "input";
   name: "row" | "column";
   message: string;
-  validate: ValidatorLetter | ValidatorNumber;
+  validate: ValidGameInputTypes;
 }
 function gatherPlayersInputs(): Promise<XYCoords | "end"> {
   print('\nType "end" to end the game');
@@ -485,24 +484,35 @@ function gatherPlayersInputs(): Promise<XYCoords | "end"> {
       type: "input",
       name: "row",
       message: "Select a letter: ",
-      validate(value: string) {
-        const pass = value.length === 1 && value.match(/[a-j]/g);
-        if (pass || value === "end") {
+      validate(value) {
+        if (typeof value === "string" && value.toLocaleLowerCase() === "end") {
+          return true;
+        } else if (
+          typeof value === "string" &&
+          value.length === 1 &&
+          value.toLowerCase().match(/[a-j]/g)
+        ) {
           return true;
         }
-        return "Please enter a valid row.";
+        return "Please enter a valid letter [A - J].";
       },
     },
     {
       type: "input",
       name: "column",
-      message: "select a number: ",
-      validate(value: number) {
-        const pass = value >= 1 && value <= 10;
-        if (pass) {
+      message: "Select a number: ",
+      validate(value) {
+        if (typeof value === "string" && value.toLowerCase() === "end") {
+          return true;
+        } else if (
+          typeof value === "string" &&
+          !Number.isNaN(parseInt(value)) &&
+          parseInt(value) >= 1 &&
+          parseInt(value) <= 10
+        ) {
           return true;
         }
-        return "Please enter a valid row.";
+        return "Please enter a valid number [1 - 10].";
       },
       when(answer) {
         return answer.row !== "end";
@@ -511,7 +521,7 @@ function gatherPlayersInputs(): Promise<XYCoords | "end"> {
   ];
 
   return prompt(testQuestions).then((answers) => {
-    if (answers.row === "end") {
+    if (answers.row === "end" || answers?.column === "end") {
       return "end";
     }
     return {
@@ -539,7 +549,7 @@ async function initiateApp() {
                                            
 `);
 
-  const { titleSelection } = await gameMenuSelect();
+  const { titleSelection } = await userMenuSelect();
 
   switch (titleSelection) {
     case "Start Game":
@@ -562,21 +572,30 @@ async function initiateApp() {
 }
 
 function showInstructions() {
+  console.clear();
   print(`
-  Hello And welcome to battleship.
-  Each board is automatically generated.
-  You battleships are laid out vertical and horizontal, never diagonal.
+  _____ _   _  _____ _______ _____  _    _  _____ _______ _____ ____  _   _  _____ 
+ |_   _| \\ | |/ ____|__   __|  __ \\| |  | |/ ____|__   __|_   _/ __ \\| \\ | |/ ____|
+   | | |  \\| | (___    | |  | |__) | |  | | |       | |    | || |  | |  \\| | (___  
+   | | | . \` |\\___ \\   | |  |  _  /| |  | | |       | |    | || |  | | . \` |\\___ \\ 
+  _| |_| |\\  |____) |  | |  | | \\ \\| |__| | |____   | |   _| || |__| | |\\  |____) |
+ |_____|_| \\_|_____/   |_|  |_|  \\_\\\\____/ \\_____|  |_|  |_____\\____/|_| \\_|_____/ 
+                                                                                   
+  `);
+  print(`
+  Your board is automatically generated.
+  Each battleships is laid out vertical or horizontal, they will never be diagonal.
 
-  The board up top tracks where all the shots you fire on at your enemy will land.
-  Red colored tiles indicate a hit, a yellow indicates a miss.
+  The board up top is used to track all the shots you have fire at your enemy.
+  The bottom board contains your ships and the enemys shot's will be tracked here.
+  Red coloured tiles indicate a hit, a yellow indicates a miss.
 
   The number of the tile represents the size of the battleship.
-
   (ex: A red 4 tile represents a hit on a battleship that's four tiles of size, either horizontal or veritcal)"
 
-  When prompted: provide first: a letter from [a-l], and second a number from [1-10].
+  When prompted: provide first: a letter from [ A - L ], and second a number from [ 1 - 10 ].
   
-  Type end while its your turn to end the current game session and return to the title screen. 
+  Type "end" while its your turn to end the current game session and return to the title screen. 
   `);
   prompt({
     type: "input",
@@ -598,7 +617,7 @@ function exitGame(n = 3) {
   setTimeout(() => process.kill(process.pid), (n + 1) * 1000);
 }
 
-async function gameMenuSelect() {
+async function userMenuSelect() {
   const titleChoices: InquirerQuestionMenuSelect = {
     type: "list",
     name: "titleSelection",
