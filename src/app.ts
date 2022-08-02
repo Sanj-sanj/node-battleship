@@ -1,9 +1,6 @@
-import inquirer, { Answers, Inquirer } from "inquirer";
-import readline from "readline";
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
+import inquirer, { Answers, Question } from "inquirer";
+const prompt = inquirer.createPromptModule();
+
 /*
  ========================
         TYPES
@@ -53,6 +50,20 @@ type ShipState = {
 interface InquirerTitleSelectAnswers extends Answers {
   titleSelection: GameTitleChoices;
 }
+
+type GameTitleChoices =
+  | "Start Game"
+  | "Load Game*"
+  | "Highscores*"
+  | "Instructions"
+  | "Quit Application";
+
+type InquirerQuestionMenuSelect = {
+  type: "list";
+  name: "titleSelection";
+  message: "please select an option";
+  choices: GameTitleChoices[];
+};
 /*
  ========================
         TYPES
@@ -355,7 +366,7 @@ async function setupGame() {
     const initialCoords: XYCoords = { x: 0, y: 0 };
     let { y, x } = initialCoords;
     if (playersTurn) {
-      const result = await gatherPlayersInputs(evaluationBoard, initialCoords);
+      const result = await gatherPlayersInputs();
       if (typeof result === "object") {
         (y = result.y), (x = result.x);
       } else if (result === "end") {
@@ -368,7 +379,6 @@ async function setupGame() {
       y = Math.floor(Math.random() * evaluationBoard.length);
       x = Math.floor(Math.random() * evaluationBoard[y].length);
     }
-
     // UTILS ===================================
     const red = (tile: string) => "\x1b[41m" + tile + "\x1b[0m";
     const yellow = (tile: string) => "\x1b[43m" + tile + "\x1b[0m";
@@ -458,35 +468,57 @@ async function setupGame() {
   return state.get().shipsState;
 }
 
-function gatherPlayersInputs(
-  board: Board,
-  coords: XYCoords
-): Promise<XYCoords | string> {
-  let { x, y } = coords;
+type ValidatorLetter = (value: string) => boolean | string;
+type ValidatorNumber = (value: number) => boolean | string;
+
+interface InquirerPlayerInputs extends Question {
+  type: "input";
+  name: "row" | "column";
+  message: string;
+  validate: ValidatorLetter | ValidatorNumber;
+}
+function gatherPlayersInputs(): Promise<XYCoords | "end"> {
   print('\nType "end" to end the game');
 
-  return new Promise<XYCoords | string>((resolve, reject) => {
-    rl.question("Pick a letter: ", (char) => {
-      if (char === "end") return resolve(char);
-      x = char.toLowerCase().charCodeAt(0) - 97;
-      if (char.length === 1 && x >= 0 && x < board[0].length) {
-        rl.question("Pick a number: ", (num) => {
-          y = parseInt(num) - 1;
-          if (y >= 0 && y < board.length) {
-            return resolve({ y, x });
-          } else {
-            reject(print("Number not in range try again."));
-          }
-        });
-      } else {
-        reject(print("Character not in range try another input."));
-      }
-    });
-  })
-    .then((coordinates) => {
-      return coordinates;
-    })
-    .catch(() => gatherPlayersInputs(board, coords));
+  const testQuestions: InquirerPlayerInputs[] = [
+    {
+      type: "input",
+      name: "row",
+      message: "Select a letter: ",
+      validate(value: string) {
+        const pass = value.length === 1 && value.match(/[a-j]/g);
+        if (pass || value === "end") {
+          return true;
+        }
+        return "Please enter a valid row.";
+      },
+    },
+    {
+      type: "input",
+      name: "column",
+      message: "select a number: ",
+      validate(value: number) {
+        const pass = value >= 1 && value <= 10;
+        if (pass) {
+          return true;
+        }
+        return "Please enter a valid row.";
+      },
+      when(answer) {
+        return answer.row !== "end";
+      },
+    },
+  ];
+
+  return prompt(testQuestions).then((answers) => {
+    if (answers.row === "end") {
+      return "end";
+    }
+    return {
+      x: answers.row.toLowerCase().charCodeAt(0) - 97,
+      y: answers.column - 1,
+    } as XYCoords;
+  });
 }
 
 function checkForHit({ y, x }: XYCoords, boardToCheck: Board) {
@@ -496,12 +528,66 @@ function checkForHit({ y, x }: XYCoords, boardToCheck: Board) {
 }
 
 async function initiateApp() {
-  print(
-    "\nHello And welcome to battleship\nEach board are automatically generated currently.\nThe board up top tracks where all the shots you fire on your enemy land.\nRed colored tiles indicate a hit, the number represents the size of the battleship.\n\n(A red 4 tile represents a hit on a battleship that's four tiles of size, either horizontal or veritcal)"
-  );
+  console.clear();
+  print(`
+  ____       _______ _______ _      ______  _____ _    _ _____ _____  
+ |  _ \\   /\\|__   __|__   __| |    |  ____|/ ____| |  | |_   _|  __ \\ 
+ | |_) | /  \\  | |     | |  | |    | |__  | (___ | |__| | | | | |__) |
+ |  _ < / /\\ \\ | |     | |  | |    |  __|  \\___ \\|  __  | | | |  ___/ 
+ | |_) / ____ \\| |     | |  | |____| |____ ____) | |  | |_| |_| |     
+ |____/_/    \\_\\_|     |_|  |______|______|_____/|_|  |_|_____|_|     
+                                           
+`);
 
-  return await gameMenuSelect();
+  const { titleSelection } = await gameMenuSelect();
+
+  switch (titleSelection) {
+    case "Start Game":
+      new Promise((res) => res(setupGame())).then(() =>
+        setTimeout(() => initiateApp(), 2000)
+      );
+      break;
+
+    case "Quit Application":
+      exitGame();
+      break;
+
+    case "Instructions":
+      showInstructions();
+      break;
+
+    default:
+      break;
+  }
 }
+
+function showInstructions() {
+  print(`
+  Hello And welcome to battleship.
+  Each board is automatically generated.
+  You battleships are laid out vertical and horizontal, never diagonal.
+
+  The board up top tracks where all the shots you fire on at your enemy will land.
+  Red colored tiles indicate a hit, a yellow indicates a miss.
+
+  The number of the tile represents the size of the battleship.
+
+  (ex: A red 4 tile represents a hit on a battleship that's four tiles of size, either horizontal or veritcal)"
+
+  When prompted: provide first: a letter from [a-l], and second a number from [1-10].
+  
+  Type end while its your turn to end the current game session and return to the title screen. 
+  `);
+  prompt({
+    type: "input",
+    name: "instructions",
+    message: "Press enter to return to the title.",
+    default: "Okay, all good!",
+  }).then(() => {
+    initiateApp();
+  });
+}
+
 function exitGame(n = 3) {
   let timer = n;
   print("The game will end in: ");
@@ -512,42 +598,22 @@ function exitGame(n = 3) {
   setTimeout(() => process.kill(process.pid), (n + 1) * 1000);
 }
 
-type GameTitleChoices =
-  | "Start Game"
-  | "Load Game*"
-  | "Highscores*"
-  | "Instructions"
-  | "Quit Application";
-
 async function gameMenuSelect() {
-  let result;
-
-  type InquirerQuestionMenuSelect = {
-    type: "list";
-    name: "titleSelection";
-    message: "please select an option";
-    choices: GameTitleChoices[];
+  const titleChoices: InquirerQuestionMenuSelect = {
+    type: "list",
+    name: "titleSelection",
+    message: "please select an option",
+    choices: [
+      "Start Game",
+      "Load Game*",
+      "Highscores*",
+      "Instructions",
+      "Quit Application",
+    ],
   };
-  const titleChoices: [InquirerQuestionMenuSelect] = [
-    {
-      type: "list",
-      name: "titleSelection",
-      message: "please select an option",
-      choices: [
-        "Start Game",
-        "Load Game*",
-        "Highscores*",
-        "Instructions",
-        "Quit Application",
-      ],
-    },
-  ];
-  return (await inquirer.prompt(titleChoices).then((response) => {
+  return (await prompt(titleChoices).then((response) => {
     return response;
   })) as InquirerTitleSelectAnswers;
 }
 
-const res = initiateApp();
-res.finally(() => {});
-
-setupGame();
+initiateApp();
