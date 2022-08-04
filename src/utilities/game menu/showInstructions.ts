@@ -1,4 +1,4 @@
-import print from "../printToScreen";
+import print from "../print.js";
 import inquirer from "inquirer";
 
 const prompt = inquirer.createPromptModule();

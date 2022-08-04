@@ -1,5 +1,5 @@
 import { Board } from "../../../types/GameTypes";
-import print from "../../printToScreen";
+import print from "../../print.js";
 
 export default function prettyPrintBoard(board: Board) {
   print("\n     A B C D E F G H I J");

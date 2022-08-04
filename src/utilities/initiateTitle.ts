@@ -1,10 +1,10 @@
-import setupGame from "./utilities/game logic/setupGame";
-import exitGame from "./utilities/game menu/exitGame";
-import showInstructions from "./utilities/game menu/showInstructions";
-import userMenuSelect from "./utilities/game menu/userMenuSelection";
-import print from "./utilities/printToScreen";
+import startGame from "./game logic/startGame.js";
+import exitGame from "./game menu/exitGame.js";
+import showInstructions from "./game menu/showInstructions.js";
+import userMenuSelect from "./game menu/userMenuSelection.js";
+import print from "./print.js";
 
-export default async function initiateApp() {
+export default async function initiateTitle() {
   console.clear();
   print(`
     ____       _______ _______ _      ______  _____ _    _ _____ _____  
@@ -20,17 +20,17 @@ export default async function initiateApp() {
 
   switch (titleSelection) {
     case "Start Game":
-      new Promise((res) => res(setupGame())).then(() =>
-        setTimeout(() => initiateApp(), 2000)
+      new Promise((res) => res(startGame())).then(() =>
+        setTimeout(() => initiateTitle(), 2000)
       );
+      break;
+
+    case "Instructions":
+      showInstructions(initiateTitle);
       break;
 
     case "Quit Application":
       exitGame();
-      break;
-
-    case "Instructions":
-      showInstructions(initiateApp);
       break;
 
     default:

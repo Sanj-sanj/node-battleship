@@ -4,8 +4,8 @@ import {
   ShipPlotPoints,
   TurnPlayer,
 } from "../../../types/GameTypes";
-import ascertainDirections from "./ascertainDirections";
-import buildShips from "./buildShips";
+import ascertainDirections from "./ascertainDirections.js";
+import buildShips from "./buildShips.js";
 
 export default function populateBoard(
   board: Board,

@@ -1,14 +1,14 @@
 import { Board, XYCoords } from "../../types/GameTypes";
-import print from "../printToScreen";
-import checkForHit from "./board/checkForHit";
-import createEmptyBoard from "./board/createEmptyBoard";
-import fillTileWithHitMarker from "./board/fileTileWithHitMarker";
-import mapSunkShips from "./board/mapSunkShips";
-import populateBoard from "./board/populateBoard";
-import prettyPrintBoard from "./board/prettyPrintBoard";
-import tallySunken from "./board/tallySunken";
-import state from "./gameState";
-import promptPlayersInputs from "./promptPlayerInputs";
+import print from "../print.js";
+import checkForHit from "./board/checkForHit.js";
+import createEmptyBoard from "./board/createEmptyBoard.js";
+import fillTileWithHitMarker from "./board/fileTileWithHitMarker.js";
+import mapSunkShips from "./board/mapSunkShips.js";
+import populateBoard from "./board/populateBoard.js";
+import prettyPrintBoard from "./board/prettyPrintBoard.js";
+import tallySunken from "./board/tallySunken.js";
+import state from "../game state/gameState.js";
+import promptPlayersInputs from "./promptPlayerInputs.js";
 
 export default async function gameLoop(
   plBoard: void | Board,

@@ -1,7 +1,7 @@
 import inquirer from "inquirer";
 import { XYCoords } from "../../types/GameTypes";
 import { InquirerPlayerInputs } from "../../types/InquirerTypes";
-import print from "../printToScreen";
+import print from "../print.js";
 
 const prompt = inquirer.createPromptModule();
 

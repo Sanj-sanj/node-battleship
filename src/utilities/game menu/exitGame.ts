@@ -1,4 +1,4 @@
-import print from "../printToScreen";
+import print from "../print.js";
 
 export default function exitGame(n = 3) {
   let timer = n;
