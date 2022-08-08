@@ -13,6 +13,7 @@ import printBoards from "./board/printBoards.js";
 console.log(printBoards);
 
 export default async function gameLoop(
+  salvo: boolean,
   playerBoard: Board = populateBoard(
     createEmptyBoard(),
     state.updatePositions,
@@ -51,11 +52,15 @@ export default async function gameLoop(
   // this function call will not print on enemy's turn
   print(playersTurn ? "Player's turn" : "Enemy's turn");
   // [ [ ---> NOTE <--- ] ] : printBoards(a, b = true) enables debugging
-  printBoards([guessBoard as Board, playerBoard as Board, enemyBoard as Board]);
+  printBoards(
+    [guessBoard as Board, playerBoard as Board, enemyBoard as Board],
+    true
+  );
 
   //If it is the players turn, we are evaluating the shots fired on the rival board. and updating that turn's (player/ai) board
   const initialCoords: XYCoords = { x: 0, y: 0 };
   let { y, x } = initialCoords;
+
   if (playersTurn) {
     const result = await promptPlayersInputs();
     if (typeof result === "object") {
@@ -104,8 +109,23 @@ export default async function gameLoop(
       );
       fill = yellow(tile);
     }
-    state.swapTurn();
-    state.incrementTurnCounter(turnPlayer);
+    //salvo should only display 'SHOT MISS OR SHOT HIT' message on final shot.
+    if (salvo) {
+      state.updateSalvoRemaining(turnPlayer);
+      const roundsLeft = state.get().salvo[turnPlayer].remaining;
+      console.log(roundsLeft);
+      if (roundsLeft === 0) {
+        //player has fired all shots
+        state.swapTurn();
+        state.incrementTurnCounter(turnPlayer);
+        // total only gets decremented when turnPlayer sinks a ship
+        // state.updateSalvoTotal(turnPlayer);
+        state.updateSalvoRemaining(turnPlayer);
+      }
+    } else {
+      state.swapTurn();
+      state.incrementTurnCounter(turnPlayer);
+    }
   }
 
   const newPlayerBoard = !playersTurn
@@ -122,7 +142,7 @@ export default async function gameLoop(
   //by enveloping gameLoop in a setTimeout to delay by `n` seconds, the promise guarantees it will not fire untill completion of the timeout AND we will not prematurely return a non promise based value, which will continue thread of execturion after first return
   return new Promise((res) => {
     setTimeout(async () => {
-      res(await gameLoop(newPlayerBoard, enemyBoard, newGuessingBoard));
+      res(await gameLoop(salvo, newPlayerBoard, enemyBoard, newGuessingBoard));
     }, gameRenderMS);
   });
 }

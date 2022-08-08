@@ -16,13 +16,13 @@ export default async function initiateTitle() {
                                              
   `);
 
-  const { titleSelection } = await userMenuSelect();
-
+  const result = await userMenuSelect();
+  const { titleSelection } = result;
   switch (titleSelection) {
     case "Start Game":
-      new Promise((res) => res(startGame())).then(() =>
-        setTimeout(() => initiateTitle(), 2000)
-      );
+      new Promise((res) =>
+        setTimeout(() => res(startGame(result.enableSalvo)), 2222)
+      ).then(() => setTimeout(() => initiateTitle(), 2000));
       break;
 
     case "Instructions":

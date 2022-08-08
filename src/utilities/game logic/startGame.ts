@@ -2,8 +2,8 @@ import print from "../print.js";
 import gameLoop from "./gameLoop.js";
 import state from "../game state/gameState.js";
 
-export default async function startGame() {
-  await gameLoop();
+export default async function startGame(salvo = false) {
+  await gameLoop(salvo);
   if (state.get().gameHasEnded) {
     //below logic  shold become a return statement or change this fnc return statement
     if (state.get().playerHasWon) {

@@ -1,4 +1,9 @@
-import { Answers, Question } from "inquirer";
+import {
+  Answers,
+  AsyncDynamicQuestionProperty,
+  Inquirer,
+  Question,
+} from "inquirer";
 
 /*
  ==========================================
@@ -8,6 +13,7 @@ import { Answers, Question } from "inquirer";
 
 export interface InquirerTitleSelectAnswers extends Answers {
   titleSelection: GameMenuChoices;
+  enableSalvo?: boolean;
 }
 
 export type GameMenuChoices =
@@ -17,13 +23,13 @@ export type GameMenuChoices =
   | "Instructions"
   | "Quit Application";
 
-export type InquirerQuestionMenuSelect = {
+export interface InquirerQuestionMenuSelect extends Question {
   type: "list";
-  name: "titleSelection";
-  message: "please select an option";
-  choices: GameMenuChoices[];
-};
-
+  name: "titleSelection" | "enableSalvo";
+  message: string;
+  choices: GameMenuChoices[] | ["Yes", "No"];
+  // when?: ({ choice }: InquirerTitleSelectAnswers) => boolean;
+}
 /*
  ==========================================
             GAME LOGIC TYPES

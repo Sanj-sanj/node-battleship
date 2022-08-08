@@ -11,7 +11,12 @@ function setupGameState() {
   let gameHasEnded = false;
   let isPlayersTurn = true;
   let playerTurns = 0;
-  let cpuTurns = 0;
+  let enemyTurns = 0;
+  const salvo = {
+    player: { total: 5, remaining: 5 },
+    enemy: { total: 5, remaining: 5 },
+  };
+
   const shipsState = { player: [] as ShipState[], enemy: [] as ShipState[] };
   const shipsHit = { player: [] as XYCoords[], enemy: [] as XYCoords[] };
   const shotsFiredHistory = {
@@ -23,6 +28,15 @@ function setupGameState() {
     enemy: [] as ShipPlotPoints[],
   };
 
+  function updateSalvoRemaining(name: TurnPlayer) {
+    if (salvo[name].remaining === 0) salvo[name].remaining = salvo[name].total;
+    salvo[name].remaining = salvo[name].remaining - 1;
+  }
+  function updateSalvoTotal(name: TurnPlayer) {
+    if (salvo[name].remaining === 0) {
+      salvo[name].total = salvo[name].total - 1;
+    }
+  }
   function checkIfPreviouslyHitTile({ x, y }: XYCoords, name: TurnPlayer) {
     return shotsFiredHistory[name].some(
       (coord) => coord.x === x && coord.y === y
@@ -32,7 +46,7 @@ function setupGameState() {
     shotsFiredHistory[name].push({ x, y });
   }
   function incrementTurnCounter(whosTurn: TurnPlayer) {
-    whosTurn === "player" ? playerTurns++ : cpuTurns++;
+    whosTurn === "player" ? playerTurns++ : enemyTurns++;
   }
   function updateShipStates(sunkShips: ShipState[], name: TurnPlayer) {
     shipsState[name] = [...sunkShips];
@@ -62,10 +76,13 @@ function setupGameState() {
       isPlayersTurn,
       playerHasWon,
       gameHasEnded,
+      salvo,
     };
   }
 
   return {
+    updateSalvoTotal,
+    updateSalvoRemaining,
     checkIfPreviouslyHitTile,
     updatePlayerHasWon,
     updateGameHasEnded,
