@@ -5,9 +5,11 @@ import print from "../print.js";
 
 const prompt = inquirer.createPromptModule();
 
-export default function promptPlayersInputs(): Promise<XYCoords | "end"> {
+export default function promptPlayersInputs(
+  salvo: boolean,
+  salvoRounds = 1
+): Promise<XYCoords[] | "end"> {
   print('\nType "end" to end the game');
-
   const testQuestions: InquirerPlayerInputs[] = [
     {
       type: "input",
@@ -49,13 +51,31 @@ export default function promptPlayersInputs(): Promise<XYCoords | "end"> {
     },
   ];
 
-  return prompt(testQuestions).then((answers) => {
-    if (answers.row === "end" || answers?.column === "end") {
-      return "end";
-    }
-    return {
-      x: answers.row.toLowerCase().charCodeAt(0) - 97,
-      y: answers.column - 1,
-    } as XYCoords;
-  });
+  const output = [] as XYCoords[];
+  let shotsFiredCounter = salvoRounds;
+  function gatherInputs(): Promise<"end" | XYCoords[]> {
+    return prompt(testQuestions).then((answers) => {
+      if (answers.row === "end" || answers?.column === "end") {
+        return "end";
+      }
+      const x = answers.row.toLowerCase().charCodeAt(0) - 97;
+      const y = answers.column - 1;
+      if (
+        output.length > 0 &&
+        output.some((acc) => acc.x === x && acc.y === y)
+      ) {
+        print("You've already selected that spot!");
+        return gatherInputs();
+      }
+      output.push({ x, y });
+      if (salvo && shotsFiredCounter > 1) {
+        shotsFiredCounter--;
+        return gatherInputs();
+      } else {
+        return output;
+      }
+    });
+  }
+  return gatherInputs();
+  // if(salvo) return output;
 }

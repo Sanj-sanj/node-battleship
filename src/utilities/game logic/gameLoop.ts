@@ -28,7 +28,7 @@ export default async function gameLoop(
 ) {
   console.clear();
   const playersTurn = state.get().isPlayersTurn;
-  const evaluationBoard = playersTurn ? enemyBoard : playerBoard;
+  const opponentBoard = playersTurn ? enemyBoard : playerBoard;
   const turnOpponent = playersTurn ? "enemy" : "player";
   const turnPlayer = playersTurn ? "player" : "enemy";
   const gameRenderMS = 2250;
@@ -62,27 +62,32 @@ export default async function gameLoop(
   let { y, x } = initialCoords;
 
   if (playersTurn) {
-    const result = await promptPlayersInputs();
-    if (typeof result === "object") {
-      (y = result.y), (x = result.x);
-    } else if (result === "end") {
+    const result = await promptPlayersInputs(
+      salvo,
+      state.get().salvo.player.total
+    );
+    if (result === "end") {
       state.updateGameHasEnded(true);
       print("\nThanks for playing");
       return true;
+    } else if (Array.isArray(result) && result.length === 1) {
+      (y = result[0].y), (x = result[0].x);
     }
   } else {
-    y = Math.floor(Math.random() * evaluationBoard.length);
-    x = Math.floor(Math.random() * evaluationBoard[y].length);
+    y = Math.floor(Math.random() * opponentBoard.length);
+    x = Math.floor(Math.random() * opponentBoard[y].length);
   }
   // TILE FILL UTILS ===================================
   const red = (tile: string) => "\x1b[41m" + tile + "\x1b[0m";
   const yellow = (tile: string) => "\x1b[43m" + tile + "\x1b[0m";
   // TILE FILL UTILS ===================================
 
-  const { hit, tile } = checkForHit({ y, x }, evaluationBoard);
+  // ALTER THESE FUNTIONCS TO ACCEPT XYCoords[] instead of just object for salvo
+  const { hit, tile } = checkForHit({ y, x }, opponentBoard);
   const repeatShot = state.checkIfPreviouslyHitTile({ x, y }, turnPlayer);
   let fill = tile;
 
+  //if salvo, loop through the xy coords and log all shots one by one
   console.clear();
   if (!hit && repeatShot && turnPlayer === "player") {
     print("You've already shot a cannonball there, try another space.");
@@ -110,6 +115,7 @@ export default async function gameLoop(
       fill = yellow(tile);
     }
     //salvo should only display 'SHOT MISS OR SHOT HIT' message on final shot.
+    // update this if statement, needs to just update reamining salvo based on shipsSunk.
     if (salvo) {
       state.updateSalvoRemaining(turnPlayer);
       const roundsLeft = state.get().salvo[turnPlayer].remaining;

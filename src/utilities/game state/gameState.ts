@@ -66,8 +66,9 @@ function setupGameState() {
   function updateGameHasEnded(bool: boolean) {
     gameHasEnded = bool;
   }
-
+  //TO DO change accept param and type it
   function get() {
+    //get(turns).player
     return {
       playerTurns,
       shipsHit,
