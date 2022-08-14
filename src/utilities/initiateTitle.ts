@@ -5,7 +5,7 @@ import userMenuSelect from "./game menu/userMenuSelection.js";
 import print from "./print.js";
 
 export default async function initiateTitle() {
-  console.clear();
+  console.clear(); // eslint-disable-line
   print(`
     ____       _______ _______ _      ______  _____ _    _ _____ _____  
    |  _ \\   /\\|__   __|__   __| |    |  ____|/ ____| |  | |_   _|  __ \\ 

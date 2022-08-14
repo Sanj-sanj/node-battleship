@@ -37,10 +37,14 @@ function setupGameState() {
       salvo[name].total = salvo[name].total - 1;
     }
   }
-  function checkIfPreviouslyHitTile({ x, y }: XYCoords, name: TurnPlayer) {
-    return shotsFiredHistory[name].some(
-      (coord) => coord.x === x && coord.y === y
+  function checkIfPreviouslyHitTile(coords: XYCoords[], name: TurnPlayer) {
+    return coords.map(({ x, y }) =>
+      shotsFiredHistory[name].some((hist) => hist.x === x && hist.y === y)
     );
+
+    // return shotsFiredHistory[name].some(
+    //   (coord) => coord.x === x && coord.y === y
+    // );
   }
   function updateShotsFiredHistory({ x, y }: XYCoords, name: TurnPlayer) {
     shotsFiredHistory[name].push({ x, y });

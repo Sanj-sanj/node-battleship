@@ -25,6 +25,10 @@ export default async function userMenuSelect() {
       name: "enableSalvo",
       message: "Would you like to enable salvo?",
       choices: ["Yes", "No"],
+      default: "No",
+      filter(input) {
+        return input === "No" ? false : true;
+      },
       when(answer) {
         return answer.titleSelection === "Start Game";
       },

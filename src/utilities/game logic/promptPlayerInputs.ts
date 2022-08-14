@@ -9,7 +9,11 @@ export default function promptPlayersInputs(
   salvo: boolean,
   salvoRounds = 1
 ): Promise<XYCoords[] | "end"> {
+  const output = [] as XYCoords[];
+  let shotsFiredCounter = salvoRounds;
+
   print('\nType "end" to end the game');
+
   const testQuestions: InquirerPlayerInputs[] = [
     {
       type: "input",
@@ -51,8 +55,6 @@ export default function promptPlayersInputs(
     },
   ];
 
-  const output = [] as XYCoords[];
-  let shotsFiredCounter = salvoRounds;
   function gatherInputs(): Promise<"end" | XYCoords[]> {
     return prompt(testQuestions).then((answers) => {
       if (answers.row === "end" || answers?.column === "end") {

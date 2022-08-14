@@ -2,15 +2,13 @@ import { Board, XYCoords } from "../../types/GameTypes";
 import print from "../print.js";
 import checkForHit from "./board/checkForHit.js";
 import createEmptyBoard from "./board/createEmptyBoard.js";
-import fillTileWithHitMarker from "./board/fileTileWithHitMarker.js";
 import mapSunkShips from "./board/mapSunkShips.js";
 import populateBoard from "./board/populateBoard.js";
 import tallySunken from "./board/tallySunken.js";
 import state from "../game state/gameState.js";
 import promptPlayersInputs from "./promptPlayerInputs.js";
 import printBoards from "./board/printBoards.js";
-
-console.log(printBoards);
+import logAndUpdateShotsFired from "./logAndUpdateShotsFired.js";
 
 export default async function gameLoop(
   salvo: boolean,
@@ -33,6 +31,10 @@ export default async function gameLoop(
   const turnPlayer = playersTurn ? "player" : "enemy";
   const gameRenderMS = 2250;
 
+  /*
+    TO DO, CLEAR STATE ON EACH NEW GAME STARTED 
+*/
+
   // By updating the sunkenShips on the start of each gameLoop,
   // The printed board will not reflect changes untill its time for the player's next turn.
   const sunkenShips = mapSunkShips(
@@ -50,16 +52,11 @@ export default async function gameLoop(
 
   // Board state shown while player plays their turn move.
   // this function call will not print on enemy's turn
-  print(playersTurn ? "Player's turn" : "Enemy's turn");
+  print(playersTurn ? "It's your turn, make a move!" : "Enemy's turn");
   // [ [ ---> NOTE <--- ] ] : printBoards(a, b = true) enables debugging
-  printBoards(
-    [guessBoard as Board, playerBoard as Board, enemyBoard as Board],
-    true
-  );
+  printBoards([guessBoard, playerBoard, enemyBoard], false);
 
-  //If it is the players turn, we are evaluating the shots fired on the rival board. and updating that turn's (player/ai) board
-  const initialCoords: XYCoords = { x: 0, y: 0 };
-  let { y, x } = initialCoords;
+  const inputedCoords = [] as XYCoords[];
 
   if (playersTurn) {
     const result = await promptPlayersInputs(
@@ -70,85 +67,36 @@ export default async function gameLoop(
       state.updateGameHasEnded(true);
       print("\nThanks for playing");
       return true;
-    } else if (Array.isArray(result) && result.length === 1) {
-      (y = result[0].y), (x = result[0].x);
+    } else {
+      inputedCoords.push(...result);
     }
   } else {
-    y = Math.floor(Math.random() * opponentBoard.length);
-    x = Math.floor(Math.random() * opponentBoard[y].length);
-  }
-  // TILE FILL UTILS ===================================
-  const red = (tile: string) => "\x1b[41m" + tile + "\x1b[0m";
-  const yellow = (tile: string) => "\x1b[43m" + tile + "\x1b[0m";
-  // TILE FILL UTILS ===================================
-
-  // ALTER THESE FUNTIONCS TO ACCEPT XYCoords[] instead of just object for salvo
-  const { hit, tile } = checkForHit({ y, x }, opponentBoard);
-  const repeatShot = state.checkIfPreviouslyHitTile({ x, y }, turnPlayer);
-  let fill = tile;
-
-  //if salvo, loop through the xy coords and log all shots one by one
-  console.clear();
-  if (!hit && repeatShot && turnPlayer === "player") {
-    print("You've already shot a cannonball there, try another space.");
-    fill = yellow(tile);
-  } else if (hit && repeatShot && turnPlayer === "player") {
-    print("You've already shot a cannonball there, try another space.");
-    fill = red(tile);
-  } else {
-    state.updateShotsFiredHistory({ x, y }, turnPlayer);
-    if (hit) {
-      state.updateShipsHit({ x, y }, turnOpponent);
-      print(
-        playersTurn
-          ? `You land a hit at Y: ${y + 1}, X: ${x + 1}`
-          : `The enemy lands a hit at Y: ${y + 1}, X: ${x + 1}`
-      );
-      fill = red(tile);
-    } else {
-      //turn player shot misses
-      print(
-        playersTurn
-          ? `Your shot misses at Y: ${y + 1}, X: ${x + 1}`
-          : `The enemy's shot misses at Y: ${y + 1}, X: ${x + 1}`
-      );
-      fill = yellow(tile);
-    }
-    //salvo should only display 'SHOT MISS OR SHOT HIT' message on final shot.
-    // update this if statement, needs to just update reamining salvo based on shipsSunk.
-    if (salvo) {
-      state.updateSalvoRemaining(turnPlayer);
-      const roundsLeft = state.get().salvo[turnPlayer].remaining;
-      console.log(roundsLeft);
-      if (roundsLeft === 0) {
-        //player has fired all shots
-        state.swapTurn();
-        state.incrementTurnCounter(turnPlayer);
-        // total only gets decremented when turnPlayer sinks a ship
-        // state.updateSalvoTotal(turnPlayer);
-        state.updateSalvoRemaining(turnPlayer);
-      }
-    } else {
-      state.swapTurn();
-      state.incrementTurnCounter(turnPlayer);
-    }
+    /* to do support this ai to use salvo modes */
+    const y = Math.floor(Math.random() * opponentBoard.length),
+      x = Math.floor(Math.random() * opponentBoard[y].length);
+    inputedCoords.push({ x, y });
   }
 
-  const newPlayerBoard = !playersTurn
-    ? fillTileWithHitMarker({ x, y }, fill, playerBoard)
-    : playerBoard;
-  const newGuessingBoard = playersTurn
-    ? fillTileWithHitMarker({ x, y }, fill, guessBoard)
-    : guessBoard;
+  const validatedHits = checkForHit(inputedCoords, opponentBoard);
+  const repeatShot = state.checkIfPreviouslyHitTile(inputedCoords, turnPlayer);
 
-  //printBoards() here because without it, the function moves out to the outter body before the setTimeout executes.
-  // board printed right after either player or the AI finish their moves and persists during the timeout for the new board.
-  // After the turnPlayer finishes their move, this function call is the one that persists on screen
-  printBoards([guessBoard as Board, playerBoard as Board, enemyBoard as Board]);
+  const [newPlayerBoard, newGuessBoard] = await logAndUpdateShotsFired(
+    inputedCoords,
+    repeatShot,
+    validatedHits,
+    [turnPlayer, turnOpponent, playerBoard, guessBoard],
+    gameRenderMS,
+    0,
+    []
+  );
+
+  state.swapTurn();
+  state.incrementTurnCounter(turnPlayer);
+
   //by enveloping gameLoop in a setTimeout to delay by `n` seconds, the promise guarantees it will not fire untill completion of the timeout AND we will not prematurely return a non promise based value, which will continue thread of execturion after first return
   return new Promise((res) => {
     setTimeout(async () => {
-      res(await gameLoop(salvo, newPlayerBoard, enemyBoard, newGuessingBoard));
+      res(await gameLoop(salvo, newPlayerBoard, enemyBoard, newGuessBoard));
     }, gameRenderMS);
   });
 }

@@ -3,10 +3,10 @@ import print from "../../print.js";
 import prettyPrintBoard from "./prettyPrintBoard.js";
 
 export default function printBoards(
-  [...boards]: [Board, Board, Board],
+  [...boards]: [Board, Board, Board?],
   debug = false
 ) {
-  if (debug) {
+  if (debug && boards[2]) {
     print("\nYour ENEMY'S is:");
     prettyPrintBoard(boards[2]); //enemyBoard
   } else {

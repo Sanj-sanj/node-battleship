@@ -1,9 +1,4 @@
-import {
-  Answers,
-  AsyncDynamicQuestionProperty,
-  Inquirer,
-  Question,
-} from "inquirer";
+import { Answers, Question } from "inquirer";
 
 /*
  ==========================================
@@ -24,7 +19,7 @@ export type GameMenuChoices =
   | "Quit Application";
 
 export interface InquirerQuestionMenuSelect extends Question {
-  type: "list";
+  type: "list" | "confirm";
   name: "titleSelection" | "enableSalvo";
   message: string;
   choices: GameMenuChoices[] | ["Yes", "No"];
