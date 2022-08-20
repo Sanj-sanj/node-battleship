@@ -5,7 +5,8 @@
   "main": "ship.js",
   "scripts": {
     "build": "tsc",
-    "dev": "ts-node --esm ./src/app.ts"
+    "dev": "ts-node --esm ./src/app.ts",
+    "lint": "npx eslint \"src/**\""
   },
   "keywords": [],
   "author": "",

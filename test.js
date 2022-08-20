@@ -21,7 +21,7 @@ function ask() {
     if (answers.askAgain) {
       ask();
     } else {
-      console.log("Your favorite TV Shows:", output.join(", "));
+      console.log("Your favorite TV Shows:", answers);
     }
   });
 }

@@ -1,13 +1,14 @@
 import inquirer from "inquirer";
 import {
-  InquirerQuestionMenuSelect,
+  InquirerTitleMenuSelect,
+  InquirerSalvoSelect,
   InquirerTitleSelectAnswers,
 } from "../../types/InquirerTypes";
 
 const prompt = inquirer.createPromptModule();
 
 export default async function userMenuSelect() {
-  const titleChoices: InquirerQuestionMenuSelect[] = [
+  const titleChoices = [
     {
       type: "list",
       name: "titleSelection",
@@ -19,7 +20,7 @@ export default async function userMenuSelect() {
         "Instructions",
         "Quit Application",
       ],
-    },
+    } as InquirerTitleMenuSelect,
     {
       type: "list",
       name: "enableSalvo",
@@ -32,7 +33,7 @@ export default async function userMenuSelect() {
       when(answer) {
         return answer.titleSelection === "Start Game";
       },
-    },
+    } as InquirerSalvoSelect,
   ];
   return (await prompt(titleChoices).then((response) => {
     return response;

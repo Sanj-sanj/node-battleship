@@ -12,6 +12,7 @@ function setupGameState() {
   let isPlayersTurn = true;
   let playerTurns = 0;
   let enemyTurns = 0;
+
   const salvo = {
     player: { total: 5, remaining: 5 },
     enemy: { total: 5, remaining: 5 },
@@ -28,14 +29,8 @@ function setupGameState() {
     enemy: [] as ShipPlotPoints[],
   };
 
-  function updateSalvoRemaining(name: TurnPlayer) {
-    if (salvo[name].remaining === 0) salvo[name].remaining = salvo[name].total;
-    salvo[name].remaining = salvo[name].remaining - 1;
-  }
-  function updateSalvoTotal(name: TurnPlayer) {
-    if (salvo[name].remaining === 0) {
-      salvo[name].total = salvo[name].total - 1;
-    }
+  function updateSalvoTotal(name: TurnPlayer, sunkShips: number) {
+    salvo[name].remaining = salvo[name].total - sunkShips;
   }
   function checkIfPreviouslyHitTile(coords: XYCoords[], name: TurnPlayer) {
     return coords.map(({ x, y }) =>
@@ -87,7 +82,6 @@ function setupGameState() {
 
   return {
     updateSalvoTotal,
-    updateSalvoRemaining,
     checkIfPreviouslyHitTile,
     updatePlayerHasWon,
     updateGameHasEnded,

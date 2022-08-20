@@ -18,12 +18,17 @@ export type GameMenuChoices =
   | "Instructions"
   | "Quit Application";
 
-export interface InquirerQuestionMenuSelect extends Question {
+export interface InquirerSalvoSelect extends Question {
   type: "list" | "confirm";
   name: "titleSelection" | "enableSalvo";
   message: string;
   choices: GameMenuChoices[] | ["Yes", "No"];
-  // when?: ({ choice }: InquirerTitleSelectAnswers) => boolean;
+}
+export interface InquirerTitleMenuSelect extends Question {
+  type: "list" | "confirm";
+  name: "titleSelection" | "enableSalvo";
+  message: string;
+  choices: GameMenuChoices[] | ["Yes", "No"];
 }
 /*
  ==========================================
