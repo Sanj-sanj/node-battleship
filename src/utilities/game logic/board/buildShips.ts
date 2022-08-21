@@ -2,7 +2,6 @@ import {
   Board,
   BoardRow,
   CompassDirectionSingles,
-  ShipPlotPoints,
   XYCoords,
 } from "../../../types/GameTypes";
 
@@ -11,9 +10,9 @@ export default function buildShips(
   board: Board,
   size: number,
   direction: CompassDirectionSingles
-): [Board, ShipPlotPoints] {
+): [Board, XYCoords[]] {
   // y = parseInt(y), x = parseInt(x)
-  const shipPlots: ShipPlotPoints = [{ x, y }];
+  const shipPlots: XYCoords[] = [{ x, y }];
   const tempBoard = [...board] as Board;
   let counter = size;
   const startPointer = direction === "north" || direction === "south" ? y : x;

@@ -8,7 +8,6 @@ export default function getAiInputs(salvo: boolean, remainingAmmo: number) {
     while (
       arr.includes((aiInput: XYCoords | string) => {
         if (typeof aiInput === "string") return false;
-        console.log("valid");
         return aiInput.x === x && aiInput.y === y;
       })
     ) {

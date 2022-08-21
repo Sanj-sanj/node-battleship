@@ -38,3 +38,9 @@ export type ShipState = {
   shotsTaken: number;
   isSunk: boolean;
 };
+export type BothShipsCoords = { player: XYCoords[]; enemy: XYCoords[] };
+export type BothShipsStates = { player: ShipState[]; enemy: ShipState[] };
+export type BothShipPositions = {
+  player: ShipPlotPoints[];
+  enemy: ShipPlotPoints[];
+};

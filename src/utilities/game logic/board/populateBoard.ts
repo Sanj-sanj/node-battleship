@@ -1,15 +1,15 @@
 import {
   Board,
   CompassDirectionSingles,
-  ShipPlotPoints,
   TurnPlayer,
+  XYCoords,
 } from "../../../types/GameTypes";
 import ascertainDirections from "./ascertainDirections.js";
 import buildShips from "./buildShips.js";
 
 export default function populateBoard(
   board: Board,
-  updatePositions: (path: ShipPlotPoints, name: TurnPlayer) => void,
+  updatePositions: (XYCoords: XYCoords[], name: TurnPlayer) => void,
   name: "player" | "enemy"
 ) {
   //make empty board [[0x10]x10]

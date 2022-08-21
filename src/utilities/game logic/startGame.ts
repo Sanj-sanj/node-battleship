@@ -12,7 +12,7 @@ export default async function startGame(salvo = false) {
           state.get().playerTurns
         } mighty blows,\nYou've taken out ${state
           .get()
-          .shipsState.enemy.reduce(
+          .shipsState?.enemy.reduce(
             (acc, curr) => (curr.isSunk ? (acc += 1) : acc),
             0
           )}\nThey've gone down yarr.`

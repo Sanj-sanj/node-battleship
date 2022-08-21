@@ -1,5 +1,7 @@
 import {
-  ShipPlotPoints,
+  BothShipsCoords,
+  BothShipsStates,
+  BothShipPositions,
   ShipState,
   TurnOpponent,
   TurnPlayer,
@@ -18,16 +20,10 @@ function setupGameState() {
     enemy: { total: 5, remaining: 5 },
   };
 
-  const shipsState = { player: [] as ShipState[], enemy: [] as ShipState[] };
-  const shipsHit = { player: [] as XYCoords[], enemy: [] as XYCoords[] };
-  const shotsFiredHistory = {
-    player: [] as XYCoords[],
-    enemy: [] as XYCoords[],
-  };
-  const positions = {
-    player: [] as ShipPlotPoints[],
-    enemy: [] as ShipPlotPoints[],
-  };
+  const positions = { player: [], enemy: [] } as BothShipPositions;
+  const shipsState = { player: [], enemy: [] } as BothShipsStates;
+  const shipsHit = { player: [], enemy: [] } as BothShipsCoords;
+  const shotsFiredHistory = { player: [], enemy: [] } as BothShipsCoords;
 
   function updateSalvoTotal(name: TurnPlayer, sunkShips: number) {
     salvo[name].remaining = salvo[name].total - sunkShips;
@@ -53,7 +49,7 @@ function setupGameState() {
   function updateShipsHit(coords: XYCoords, name: TurnOpponent) {
     shipsHit[name].push(coords);
   }
-  function updatePositions(item: ShipPlotPoints, name: TurnPlayer) {
+  function updatePositions(item: XYCoords[], name: TurnPlayer) {
     positions[name].push(item);
   }
   function swapTurn() {
@@ -66,20 +62,29 @@ function setupGameState() {
     gameHasEnded = bool;
   }
   //TO DO change accept param and type it
+
   function get() {
-    //get(turns).player
-    return {
-      playerTurns,
-      shipsHit,
-      positions,
-      shipsState,
-      isPlayersTurn,
-      playerHasWon,
-      gameHasEnded,
+    // key:
+    //   | "playerTurns"
+    //   | "shipsHit"
+    //   | "positions"
+    //   | "shipsState"
+    //   | "isPlayersTurn"
+    //   | "playerHasWon"
+    //   | "gameHasEnded"
+    const f = {
+      playerTurns: playerTurns,
+      shipsHit: shipsHit,
+      positions: positions,
+      shipsState: shipsState,
+      isPlayersTurn: isPlayersTurn,
+      playerHasWon: playerHasWon,
+      gameHasEnded: gameHasEnded,
       salvo,
     };
+    // const got = f[key] as typeof f["positions"];
+    return f;
   }
-
   return {
     updateSalvoTotal,
     checkIfPreviouslyHitTile,
