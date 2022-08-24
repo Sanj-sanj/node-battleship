@@ -1,9 +1,10 @@
 import print from "../print.js";
 import gameLoop from "./gameLoop.js";
-import state from "../game state/gameState.js";
+import setupGameState from "../game state/gameState.js";
 
 export default async function startGame(salvo = false) {
-  await gameLoop(salvo);
+  const state = setupGameState();
+  await gameLoop(state, salvo);
   if (state.get().gameHasEnded) {
     //below logic  shold become a return statement or change this fnc return statement
     if (state.get().playerHasWon) {

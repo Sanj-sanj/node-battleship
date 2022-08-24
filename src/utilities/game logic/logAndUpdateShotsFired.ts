@@ -5,12 +5,19 @@ import {
   Board,
 } from "../../types/GameTypes";
 import { red, yellow } from "../fillTile.js";
-import state from "../game state/gameState.js";
+// import state from "../game state/gameState.js";
 import print from "../print.js";
 import fillTileWithHitMarker from "./board/fileTileWithHitMarker.js";
 import printBoards from "./board/printBoards.js";
 
 export default async function logAndUpdateShotsFired(
+  {
+    updateShipsHit,
+    updateShotsFiredHistory,
+  }: {
+    updateShipsHit: (coords: XYCoords, name: TurnOpponent) => void;
+    updateShotsFiredHistory: ({ x, y }: XYCoords, name: TurnPlayer) => void;
+  },
   coords: XYCoords[],
   repeatShot: boolean[],
   validatedHits: { hit: boolean; tile: string }[],
@@ -39,11 +46,11 @@ export default async function logAndUpdateShotsFired(
     print("You've already shot a cannonball there, try another space.");
     filledTile = red(tile);
   } else {
-    state.updateShotsFiredHistory({ x, y }, turnPlayer);
+    updateShotsFiredHistory({ x, y }, turnPlayer);
 
     if (hit) {
       //update to take array of XYcoords
-      state.updateShipsHit({ x, y }, turnOpponent);
+      updateShipsHit({ x, y }, turnOpponent);
       print(
         turnPlayer === "player"
           ? `You land a hit at Y: ${y + 1}, X: ${x + 1}`
@@ -78,6 +85,10 @@ export default async function logAndUpdateShotsFired(
       async () =>
         res(
           await logAndUpdateShotsFired(
+            {
+              updateShipsHit,
+              updateShotsFiredHistory,
+            },
             coords,
             repeatShot,
             validatedHits,

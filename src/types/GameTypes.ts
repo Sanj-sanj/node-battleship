@@ -44,3 +44,33 @@ export type BothShipPositions = {
   player: ShipPlotPoints[];
   enemy: ShipPlotPoints[];
 };
+export interface GameState {
+  modify: () => {
+    updateSalvoTotal: (name: TurnPlayer, sunkShips: number) => void;
+    updatePlayerHasWon: (bool: boolean) => void;
+    updateGameHasEnded: (bool: boolean) => void;
+    updateShotsFiredHistory: ({ x, y }: XYCoords, name: TurnPlayer) => void;
+    incrementTurnCounter: (whosTurn: TurnPlayer) => void;
+    updateShipsHit: (coords: XYCoords, name: TurnOpponent) => void;
+    updatePositions: (item: XYCoords[], name: TurnPlayer) => void;
+    updateShipStates: (sunkShips: ShipState[], name: TurnPlayer) => void;
+    swapTurn: () => void;
+  };
+  get: () => {
+    playerTurns: number;
+    shipsHit: BothShipsCoords;
+    positions: BothShipPositions;
+    shipsState: BothShipsStates;
+    isPlayersTurn: boolean;
+    playerHasWon: boolean;
+    gameHasEnded: boolean;
+    salvo: {
+      player: { max: number; remaining: number };
+      enemy: { max: number; remaining: number };
+    };
+    checkIfPreviouslyHitTile: (
+      coords: XYCoords[],
+      name: TurnPlayer
+    ) => boolean[];
+  };
+}

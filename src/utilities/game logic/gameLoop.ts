@@ -1,26 +1,26 @@
-import { Board, XYCoords } from "../../types/GameTypes";
+import { Board, GameState, XYCoords } from "../../types/GameTypes";
 import print from "../print.js";
 import checkForHit from "./board/checkForHit.js";
 import createEmptyBoard from "./board/createEmptyBoard.js";
 import mapSunkShips from "./board/mapSunkShips.js";
 import populateBoard from "./board/populateBoard.js";
 import tallySunken from "./board/tallySunken.js";
-import state from "../game state/gameState.js";
 import promptPlayersInputs from "./promptPlayerInputs.js";
 import printBoards from "./board/printBoards.js";
 import logAndUpdateShotsFired from "./logAndUpdateShotsFired.js";
 import getAiInputs from "./board/getAiInputs.js";
 
 export default async function gameLoop(
+  state: GameState,
   salvo: boolean,
   playerBoard: Board = populateBoard(
     createEmptyBoard(),
-    state.updatePositions,
+    state.modify().updatePositions,
     "player"
   ),
   enemyBoard: Board = populateBoard(
     createEmptyBoard(),
-    state.updatePositions,
+    state.modify().updatePositions,
     "enemy"
   ),
   guessBoard: Board = createEmptyBoard()
@@ -30,7 +30,7 @@ export default async function gameLoop(
   const opponentBoard = playersTurn ? enemyBoard : playerBoard;
   const turnOpponent = playersTurn ? "enemy" : "player";
   const turnPlayer = playersTurn ? "player" : "enemy";
-  const gameRenderMS = 2250;
+  const gameRenderMS = 2000;
 
   /*
     TO DO, CLEAR STATE ON EACH NEW GAME STARTED 
@@ -38,7 +38,11 @@ export default async function gameLoop(
 
   // Board state shown while player plays their turn move.
   // this function call will not print on enemy's turn
-  print(playersTurn ? "It's your turn, make a move!" : "Enemy's turn");
+  print(
+    playersTurn
+      ? `It's your turn, you have ${state.get().salvo.player.remaining}`
+      : "Enemy's turn"
+  );
   // [ [ ---> NOTE <--- ] ] : printBoards(a, b = true) enables debugging
   printBoards([guessBoard, playerBoard, enemyBoard], true);
 
@@ -50,7 +54,7 @@ export default async function gameLoop(
       state.get().salvo.player.remaining
     );
     if (playerInputs === "end") {
-      state.updateGameHasEnded(true);
+      state.modify().updateGameHasEnded(true);
       print("\nThanks for playing");
       return true;
     } else {
@@ -63,9 +67,14 @@ export default async function gameLoop(
     );
   }
   const validatedHits = checkForHit(inputedCoords, opponentBoard);
-  const repeatShot = state.checkIfPreviouslyHitTile(inputedCoords, turnPlayer);
-
+  const repeatShot = state
+    .get()
+    .checkIfPreviouslyHitTile(inputedCoords, turnPlayer);
   const [newPlayerBoard, newGuessBoard] = await logAndUpdateShotsFired(
+    {
+      updateShotsFiredHistory: state.modify().updateShotsFiredHistory,
+      updateShipsHit: state.modify().updateShipsHit,
+    },
     inputedCoords,
     repeatShot,
     validatedHits,
@@ -82,11 +91,11 @@ export default async function gameLoop(
     state.get().shipsHit[turnOpponent]
   );
   const sunkShips = tallySunken(sunkenShips);
-  state.updateShipStates(sunkShips, turnOpponent);
+  state.modify().updateShipStates(sunkShips, turnOpponent);
 
   if (sunkShips.every(({ isSunk }) => isSunk === true)) {
-    state.updatePlayerHasWon(true);
-    state.updateGameHasEnded(true);
+    state.modify().updatePlayerHasWon(true);
+    state.modify().updateGameHasEnded(true);
     return true;
   }
 
@@ -97,13 +106,15 @@ export default async function gameLoop(
     }, 0);
 
   print("Your opponents gonna fire!");
-  state.swapTurn();
-  state.incrementTurnCounter(turnPlayer);
-  state.updateSalvoTotal(turnPlayer, opponentShipsSunk);
+  state.modify().swapTurn();
+  state.modify().incrementTurnCounter(turnPlayer);
+  state.modify().updateSalvoTotal(turnPlayer, opponentShipsSunk);
   //by enveloping gameLoop in a setTimeout to delay by `n` seconds, the promise guarantees it will not fire untill completion of the timeout AND we will not prematurely return a non promise based value, which will continue thread of execturion after first return
   return new Promise((res) => {
     setTimeout(async () => {
-      res(await gameLoop(salvo, newPlayerBoard, enemyBoard, newGuessBoard));
+      res(
+        await gameLoop(state, salvo, newPlayerBoard, enemyBoard, newGuessBoard)
+      );
     }, gameRenderMS);
   });
 }

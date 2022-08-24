@@ -6,9 +6,10 @@ import {
   TurnOpponent,
   TurnPlayer,
   XYCoords,
+  GameState,
 } from "../../types/GameTypes";
 
-function setupGameState() {
+export default function setupGameState(): GameState {
   let playerHasWon = false;
   let gameHasEnded = false;
   let isPlayersTurn = true;
@@ -16,8 +17,8 @@ function setupGameState() {
   let enemyTurns = 0;
 
   const salvo = {
-    player: { total: 5, remaining: 5 },
-    enemy: { total: 5, remaining: 5 },
+    player: { max: 5, remaining: 5 },
+    enemy: { max: 5, remaining: 5 },
   };
 
   const positions = { player: [], enemy: [] } as BothShipPositions;
@@ -26,7 +27,7 @@ function setupGameState() {
   const shotsFiredHistory = { player: [], enemy: [] } as BothShipsCoords;
 
   function updateSalvoTotal(name: TurnPlayer, sunkShips: number) {
-    salvo[name].remaining = salvo[name].total - sunkShips;
+    salvo[name].remaining = salvo[name].max - sunkShips;
   }
   function checkIfPreviouslyHitTile(coords: XYCoords[], name: TurnPlayer) {
     return coords.map(({ x, y }) =>
@@ -72,7 +73,7 @@ function setupGameState() {
     //   | "isPlayersTurn"
     //   | "playerHasWon"
     //   | "gameHasEnded"
-    const f = {
+    return {
       playerTurns: playerTurns,
       shipsHit: shipsHit,
       positions: positions,
@@ -81,23 +82,26 @@ function setupGameState() {
       playerHasWon: playerHasWon,
       gameHasEnded: gameHasEnded,
       salvo,
+      checkIfPreviouslyHitTile,
     };
-    // const got = f[key] as typeof f["positions"];
-    return f;
+  }
+  function modify() {
+    return {
+      updateSalvoTotal,
+      updatePlayerHasWon,
+      updateGameHasEnded,
+      updateShotsFiredHistory,
+      incrementTurnCounter,
+      updateShipsHit,
+      updatePositions,
+      updateShipStates,
+      swapTurn,
+    };
   }
   return {
-    updateSalvoTotal,
-    checkIfPreviouslyHitTile,
-    updatePlayerHasWon,
-    updateGameHasEnded,
-    updateShotsFiredHistory,
-    incrementTurnCounter,
-    updateShipsHit,
-    updatePositions,
-    updateShipStates,
-    swapTurn,
+    modify,
     get,
   };
 }
-const state = setupGameState();
-export default state;
+// const state = setupGameState();
+// export default state;
