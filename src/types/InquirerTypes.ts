@@ -9,6 +9,7 @@ import { Answers, Question } from "inquirer";
 export interface InquirerTitleSelectAnswers extends Answers {
   titleSelection: GameMenuChoices;
   enableSalvo?: boolean;
+  playerName?: string;
 }
 
 export type GameMenuChoices =
@@ -23,6 +24,12 @@ export interface InquirerSalvoSelect extends Question {
   name: "titleSelection" | "enableSalvo";
   message: string;
   choices: GameMenuChoices[] | ["Yes", "No"];
+}
+export interface InquirerNameSelect extends Question {
+  type: "input";
+  name: "playerName";
+  message: string;
+  validate: (value: string) => string | true;
 }
 export interface InquirerTitleMenuSelect extends Question {
   type: "list" | "confirm";

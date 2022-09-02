@@ -3,6 +3,7 @@ import {
   InquirerTitleMenuSelect,
   InquirerSalvoSelect,
   InquirerTitleSelectAnswers,
+  InquirerNameSelect,
 } from "../../types/InquirerTypes";
 
 const prompt = inquirer.createPromptModule();
@@ -34,6 +35,24 @@ export default async function userMenuSelect() {
         return answer.titleSelection === "Start Game";
       },
     } as InquirerSalvoSelect,
+    {
+      type: "input",
+      name: "playerName",
+      message: "Please enter a name equal to or under 8 characters:",
+      when(answer) {
+        return answer.titleSelection === "Start Game";
+      },
+      validate(value: string) {
+        if (
+          typeof value === "string" &&
+          value.length >= 1 &&
+          value.length <= 8
+        ) {
+          return true;
+        }
+        return "Please enter a valid name. [1-8 characters]";
+      },
+    } as InquirerNameSelect,
   ];
   return (await prompt(titleChoices).then((response) => {
     return response;

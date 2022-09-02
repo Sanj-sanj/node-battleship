@@ -2,9 +2,18 @@ import print from "../print.js";
 import gameLoop from "./gameLoop.js";
 import setupGameState from "../game state/gameState.js";
 
-export default async function startGame(salvo = false) {
+export default async function startGame(
+  salvo = false,
+  playerName = "",
+  id: null | number = null
+) {
   const state = setupGameState();
-  await gameLoop(state, salvo);
+  const gameState = await gameLoop(state, salvo);
+  const gameFile = {
+    ...gameState,
+    playerName,
+    ID: id || Math.floor(Math.random() * 100000000),
+  };
   if (state.get().gameHasEnded) {
     //below logic  shold become a return statement or change this fnc return statement
     if (state.get().playerHasWon) {

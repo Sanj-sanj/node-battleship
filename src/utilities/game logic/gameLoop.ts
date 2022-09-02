@@ -24,17 +24,18 @@ export default async function gameLoop(
     "enemy"
   ),
   guessBoard: Board = createEmptyBoard()
-) {
+): Promise<{
+  state: GameState;
+  salvo: boolean;
+  playerBoard: Board;
+  enemyBoard: Board;
+}> {
   console.clear();
   const playersTurn = state.get().isPlayersTurn;
   const opponentBoard = playersTurn ? enemyBoard : playerBoard;
   const turnOpponent = playersTurn ? "enemy" : "player";
   const turnPlayer = playersTurn ? "player" : "enemy";
   const gameRenderMS = 2000;
-
-  /*
-    TO DO, CLEAR STATE ON EACH NEW GAME STARTED 
-*/
 
   // Board state shown while player plays their turn move.
   // this function call will not print on enemy's turn
@@ -56,7 +57,12 @@ export default async function gameLoop(
     if (playerInputs === "end") {
       state.modify().updateGameHasEnded(true);
       print("\nThanks for playing");
-      return true;
+      return {
+        state,
+        salvo,
+        playerBoard,
+        enemyBoard,
+      };
     } else {
       inputedCoords.push(...playerInputs);
     }
@@ -96,7 +102,12 @@ export default async function gameLoop(
   if (sunkShips.every(({ isSunk }) => isSunk === true)) {
     state.modify().updatePlayerHasWon(true);
     state.modify().updateGameHasEnded(true);
-    return true;
+    return {
+      state,
+      salvo,
+      playerBoard,
+      enemyBoard,
+    };
   }
 
   const opponentShipsSunk = state

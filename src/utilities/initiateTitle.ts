@@ -17,11 +17,13 @@ export default async function initiateTitle() {
   `);
 
   const result = await userMenuSelect();
-  const { titleSelection } = result;
+
+  const { titleSelection, playerName, enableSalvo } = result;
+
   switch (titleSelection) {
     case "Start Game":
       new Promise((res) =>
-        setTimeout(() => res(startGame(result.enableSalvo)), 2222)
+        setTimeout(() => res(startGame(enableSalvo, playerName)), 1250)
       ).then(() => setTimeout(() => initiateTitle(), 2000));
       break;
 
