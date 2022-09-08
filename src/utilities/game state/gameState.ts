@@ -7,24 +7,24 @@ import {
   TurnPlayer,
   XYCoords,
   GameState,
+  Salvo,
 } from "../../types/GameTypes";
 
-export default function setupGameState(): GameState {
+export default function setupGameState(
+  playerTurns = 0,
+  enemyTurns = 0,
+  salvo: Salvo = {
+    player: { max: 5, remaining: 5 },
+    enemy: { max: 5, remaining: 5 },
+  },
+  positions: BothShipPositions = { player: [], enemy: [] },
+  shipsState: BothShipsStates = { player: [], enemy: [] },
+  shipsHit: BothShipsCoords = { player: [], enemy: [] },
+  shotsFiredHistory: BothShipsCoords = { player: [], enemy: [] }
+): GameState {
   let playerHasWon = false;
   let gameHasEnded = false;
   let isPlayersTurn = true;
-  let playerTurns = 0;
-  let enemyTurns = 0;
-
-  const salvo = {
-    player: { max: 5, remaining: 5 },
-    enemy: { max: 5, remaining: 5 },
-  };
-
-  const positions = { player: [], enemy: [] } as BothShipPositions;
-  const shipsState = { player: [], enemy: [] } as BothShipsStates;
-  const shipsHit = { player: [], enemy: [] } as BothShipsCoords;
-  const shotsFiredHistory = { player: [], enemy: [] } as BothShipsCoords;
 
   function updateSalvoTotal(name: TurnPlayer, sunkShips: number) {
     salvo[name].remaining = salvo[name].max - sunkShips;
@@ -33,10 +33,6 @@ export default function setupGameState(): GameState {
     return coords.map(({ x, y }) =>
       shotsFiredHistory[name].some((hist) => hist.x === x && hist.y === y)
     );
-
-    // return shotsFiredHistory[name].some(
-    //   (coord) => coord.x === x && coord.y === y
-    // );
   }
   function updateShotsFiredHistory({ x, y }: XYCoords, name: TurnPlayer) {
     shotsFiredHistory[name].push({ x, y });
@@ -62,25 +58,18 @@ export default function setupGameState(): GameState {
   function updateGameHasEnded(bool: boolean) {
     gameHasEnded = bool;
   }
-  //TO DO change accept param and type it
 
   function get() {
-    // key:
-    //   | "playerTurns"
-    //   | "shipsHit"
-    //   | "positions"
-    //   | "shipsState"
-    //   | "isPlayersTurn"
-    //   | "playerHasWon"
-    //   | "gameHasEnded"
     return {
-      playerTurns: playerTurns,
-      shipsHit: shipsHit,
-      positions: positions,
-      shipsState: shipsState,
-      isPlayersTurn: isPlayersTurn,
-      playerHasWon: playerHasWon,
-      gameHasEnded: gameHasEnded,
+      playerTurns,
+      enemyTurns,
+      shipsHit,
+      positions,
+      shipsState,
+      shotsFiredHistory,
+      isPlayersTurn,
+      playerHasWon,
+      gameHasEnded,
       salvo,
       checkIfPreviouslyHitTile,
     };
@@ -103,5 +92,3 @@ export default function setupGameState(): GameState {
     get,
   };
 }
-// const state = setupGameState();
-// export default state;

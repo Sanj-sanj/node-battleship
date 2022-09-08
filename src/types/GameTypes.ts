@@ -31,6 +31,10 @@ export type CompassDirection = [CompassDirectionSingles];
 export type XYCoords = { x: number; y: number };
 export type ShipPlotPoints = XYCoords[];
 
+export type Salvo = {
+  player: { max: number; remaining: number };
+  enemy: { max: number; remaining: number };
+};
 export type ShipTilesHitAndSizeTuple = { counter: number; size: number };
 export type ShipState = {
   shipNo: number;
@@ -58,9 +62,11 @@ export interface GameState {
   };
   get: () => {
     playerTurns: number;
+    enemyTurns: number;
     shipsHit: BothShipsCoords;
     positions: BothShipPositions;
     shipsState: BothShipsStates;
+    shotsFiredHistory: BothShipsCoords;
     isPlayersTurn: boolean;
     playerHasWon: boolean;
     gameHasEnded: boolean;
@@ -73,4 +79,31 @@ export interface GameState {
       name: TurnPlayer
     ) => boolean[];
   };
+}
+
+export interface GameFile {
+  playerName: string;
+  ID: number;
+  state: [
+    string,
+    (
+      | number
+      | BothShipsStates
+      | BothShipsCoords
+      | {
+          player: {
+            max: number;
+            remaining: number;
+          };
+          enemy: {
+            max: number;
+            remaining: number;
+          };
+        }
+      | BothShipPositions
+    )
+  ][];
+  salvo: boolean;
+  playerBoard: Board;
+  enemyBoard: Board;
 }

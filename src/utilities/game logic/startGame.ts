@@ -1,18 +1,24 @@
 import print from "../print.js";
 import gameLoop from "./gameLoop.js";
 import setupGameState from "../game state/gameState.js";
+import { GameFile } from "../../types/GameTypes.js";
+import saveGameState from "./saveGameState.js";
 
 export default async function startGame(
-  salvo = false,
-  playerName = "",
-  id: null | number = null
+  salvo: boolean,
+  playerName: string,
+  id: number = Math.floor(Math.random() * 100000000)
 ) {
+  //  to-do add a  function loadGameState somewhere, to pickup last game saved
+  //  to-do add a  function saveTOHighscores to save completed games and time?
+
   const state = setupGameState();
   const gameState = await gameLoop(state, salvo);
-  const gameFile = {
+  const gameFile: GameFile = {
     ...gameState,
+    salvo,
     playerName,
-    ID: id || Math.floor(Math.random() * 100000000),
+    ID: id,
   };
   if (state.get().gameHasEnded) {
     //below logic  shold become a return statement or change this fnc return statement
@@ -39,6 +45,7 @@ export default async function startGame(
           )}\nThey remain.`
       );
     }
+    saveGameState(gameFile, id);
   }
 
   return state.get().shipsState;

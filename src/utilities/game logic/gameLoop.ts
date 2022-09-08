@@ -1,4 +1,11 @@
-import { Board, GameState, XYCoords } from "../../types/GameTypes";
+import {
+  Board,
+  BothShipPositions,
+  BothShipsCoords,
+  BothShipsStates,
+  GameState,
+  XYCoords,
+} from "../../types/GameTypes";
 import print from "../print.js";
 import checkForHit from "./board/checkForHit.js";
 import createEmptyBoard from "./board/createEmptyBoard.js";
@@ -12,7 +19,7 @@ import getAiInputs from "./board/getAiInputs.js";
 
 export default async function gameLoop(
   state: GameState,
-  salvo: boolean,
+  salvoEnabled: boolean,
   playerBoard: Board = populateBoard(
     createEmptyBoard(),
     state.modify().updatePositions,
@@ -25,8 +32,26 @@ export default async function gameLoop(
   ),
   guessBoard: Board = createEmptyBoard()
 ): Promise<{
-  state: GameState;
-  salvo: boolean;
+  state: [
+    string,
+    (
+      | number
+      | BothShipsStates
+      | BothShipsCoords
+      | {
+          player: {
+            max: number;
+            remaining: number;
+          };
+          enemy: {
+            max: number;
+            remaining: number;
+          };
+        }
+      | BothShipPositions
+    )
+  ][];
+  salvoEnabled: boolean;
   playerBoard: Board;
   enemyBoard: Board;
 }> {
@@ -35,7 +60,7 @@ export default async function gameLoop(
   const opponentBoard = playersTurn ? enemyBoard : playerBoard;
   const turnOpponent = playersTurn ? "enemy" : "player";
   const turnPlayer = playersTurn ? "player" : "enemy";
-  const gameRenderMS = 2000;
+  const gameRenderMS = 1000;
 
   // Board state shown while player plays their turn move.
   // this function call will not print on enemy's turn
@@ -48,18 +73,37 @@ export default async function gameLoop(
   printBoards([guessBoard, playerBoard, enemyBoard], true);
 
   const inputedCoords = [] as XYCoords[];
+  const {
+    playerTurns,
+    enemyTurns,
+    salvo,
+    positions,
+    shipsState,
+    shipsHit,
+    shotsFiredHistory,
+  } = state.get();
 
   if (playersTurn) {
     const playerInputs = await promptPlayersInputs(
-      salvo,
+      salvoEnabled,
       state.get().salvo.player.remaining
     );
     if (playerInputs === "end") {
       state.modify().updateGameHasEnded(true);
       print("\nThanks for playing");
-      return {
-        state,
+
+      const stringyState = Object.entries({
+        playerTurns,
+        enemyTurns,
         salvo,
+        positions,
+        shipsState,
+        shipsHit,
+        shotsFiredHistory,
+      }).map((v) => v);
+      return {
+        state: stringyState,
+        salvoEnabled,
         playerBoard,
         enemyBoard,
       };
@@ -67,9 +111,8 @@ export default async function gameLoop(
       inputedCoords.push(...playerInputs);
     }
   } else {
-    /* to do support this ai to use salvo modes */
     inputedCoords.push(
-      ...getAiInputs(salvo, state.get().salvo.enemy.remaining)
+      ...getAiInputs(salvoEnabled, state.get().salvo.enemy.remaining)
     );
   }
   const validatedHits = checkForHit(inputedCoords, opponentBoard);
@@ -102,9 +145,19 @@ export default async function gameLoop(
   if (sunkShips.every(({ isSunk }) => isSunk === true)) {
     state.modify().updatePlayerHasWon(true);
     state.modify().updateGameHasEnded(true);
-    return {
-      state,
+
+    const stringyState = Object.entries({
+      playerTurns,
+      enemyTurns,
       salvo,
+      positions,
+      shipsState,
+      shipsHit,
+      shotsFiredHistory,
+    }).map((v) => v);
+    return {
+      state: stringyState,
+      salvoEnabled,
       playerBoard,
       enemyBoard,
     };
@@ -124,7 +177,13 @@ export default async function gameLoop(
   return new Promise((res) => {
     setTimeout(async () => {
       res(
-        await gameLoop(state, salvo, newPlayerBoard, enemyBoard, newGuessBoard)
+        await gameLoop(
+          state,
+          salvoEnabled,
+          newPlayerBoard,
+          enemyBoard,
+          newGuessBoard
+        )
       );
     }, gameRenderMS);
   });
