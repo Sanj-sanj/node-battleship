@@ -107,3 +107,5 @@ export interface GameFile {
   playerBoard: Board;
   enemyBoard: Board;
 }
+
+export type SaveFile = GameFile[];

@@ -45,8 +45,8 @@ export default async function startGame(
           )}\nThey remain.`
       );
     }
-    saveGameState(gameFile, id);
   }
+  return saveGameState(gameFile, id);
 
-  return state.get().shipsState;
+  // return state.get().shipsState;
 }

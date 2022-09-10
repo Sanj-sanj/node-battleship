@@ -1,10 +1,18 @@
-import { readFile, writeFileSync } from "fs";
-import { GameFile } from "../../types/GameTypes";
+import { readFileSync, writeFileSync } from "fs";
+import { GameFile, SaveFile } from "../../types/GameTypes";
 
 export default function saveGameState(gameFile: GameFile, id: number) {
-  const currSave = JSON.stringify([{ [id]: gameFile }]);
-  const saves = readFile("./saves/saveFile.json", (err, data) => {
-    console.log(data);
-  });
-  writeFileSync("./saves/saveFile.json", currSave);
+  let saveFiles: SaveFile;
+  try {
+    saveFiles = JSON.parse(
+      readFileSync("./saves/saveFile.json", "utf-8")
+    ) as SaveFile;
+    const fileIndex = saveFiles.findIndex((file) => file.ID === id);
+    if (fileIndex === -1) saveFiles.push(gameFile);
+    else saveFiles[fileIndex] = gameFile;
+    writeFileSync("./saves/saveFile.json", JSON.stringify(saveFiles));
+  } catch (err) {
+    writeFileSync("./saves/error.json", JSON.stringify(err));
+    writeFileSync("./saves/saveFile.json", JSON.stringify([gameFile]));
+  }
 }
