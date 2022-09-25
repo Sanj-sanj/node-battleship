@@ -13,7 +13,7 @@ export default async function userMenuSelect() {
     {
       type: "list",
       name: "titleSelection",
-      message: "please select an option",
+      message: "Please select an option",
       choices: [
         "Start Game",
         "Load Game*",

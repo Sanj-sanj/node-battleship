@@ -1,3 +1,4 @@
+import prompWhichLoadToResume from "./game logic/promptWhichLoadToResume.js";
 import startGame from "./game logic/startGame.js";
 import exitGame from "./game menu/exitGame.js";
 import showInstructions from "./game menu/showInstructions.js";
@@ -15,7 +16,6 @@ export default async function initiateTitle() {
    |____/_/    \\_\\_|     |_|  |______|______|_____/|_|  |_|_____|_|     
                                              
   `);
-
   const result = await userMenuSelect();
 
   const { titleSelection, playerName, enableSalvo } = result;
@@ -33,6 +33,29 @@ export default async function initiateTitle() {
     case "Instructions":
       showInstructions(initiateTitle);
       break;
+
+    case "Load Game*": {
+      const loadFile = await prompWhichLoadToResume();
+      if (loadFile) {
+        new Promise((res) =>
+          setTimeout(
+            () =>
+              res(
+                startGame(
+                  loadFile.salvoEnabled,
+                  loadFile.playerName,
+                  loadFile.ID,
+                  true
+                )
+              ),
+            1250
+          )
+        ).then(() => {
+          setTimeout(() => initiateTitle(), 2000);
+        });
+      }
+      break;
+    }
 
     case "Quit Application":
       exitGame();

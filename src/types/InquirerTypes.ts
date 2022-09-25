@@ -37,6 +37,12 @@ export interface InquirerTitleMenuSelect extends Question {
   message: string;
   choices: GameMenuChoices[] | ["Yes", "No"];
 }
+export interface InquirerLoadSaveFileSelect extends Question {
+  type: "list";
+  name: "saveFileSelect";
+  message: string;
+  choices: string[];
+}
 /*
  ==========================================
             GAME LOGIC TYPES

@@ -48,6 +48,7 @@ export type BothShipPositions = {
   player: ShipPlotPoints[];
   enemy: ShipPlotPoints[];
 };
+export type BothBoards = { player: Board; enemy: Board };
 export interface GameState {
   modify: () => {
     updateSalvoTotal: (name: TurnPlayer, sunkShips: number) => void;
@@ -59,6 +60,7 @@ export interface GameState {
     updatePositions: (item: XYCoords[], name: TurnPlayer) => void;
     updateShipStates: (sunkShips: ShipState[], name: TurnPlayer) => void;
     swapTurn: () => void;
+    saveBoards: (Boards: { player: Board; enemy: Board }) => void;
   };
   get: () => {
     playerTurns: number;
@@ -70,6 +72,7 @@ export interface GameState {
     isPlayersTurn: boolean;
     playerHasWon: boolean;
     gameHasEnded: boolean;
+    lastBuiltBoards: BothBoards;
     salvo: {
       player: { max: number; remaining: number };
       enemy: { max: number; remaining: number };
@@ -81,31 +84,55 @@ export interface GameState {
   };
 }
 
-export interface GameFile {
+export interface GameSaveFile {
   playerName: string;
   ID: number;
-  state: [
-    string,
-    (
-      | number
-      | BothShipsStates
-      | BothShipsCoords
-      | {
-          player: {
-            max: number;
-            remaining: number;
-          };
-          enemy: {
-            max: number;
-            remaining: number;
-          };
-        }
-      | BothShipPositions
-    )
-  ][];
-  salvo: boolean;
+  state: GameSessionState;
+  playerBoard: Board;
+  enemyBoard: Board;
+  salvoEnabled: boolean;
+}
+export type GameSessionState = {
+  playerTurns: number;
+  enemyTurns: number;
+  salvo: Salvo;
+  positions: BothShipPositions;
+  shipsState: BothShipsStates;
+  shipsHit: BothShipsCoords;
+  shotsFiredHistory: BothShipsCoords;
+};
+export interface GameSession {
+  state: GameSessionState;
+  salvoEnabled: boolean;
   playerBoard: Board;
   enemyBoard: Board;
 }
+// export interface GameFile {
+//   playerName: string;
+//   ID: number;
+//   state: [
+//     [name]: string,
+//     string,
+//     (
+//       | number
+//       | BothShipsStates
+//       | BothShipsCoords
+//       | {
+//           player: {
+//             max: number;
+//             remaining: number;
+//           };
+//           enemy: {
+//             max: number;
+//             remaining: number;
+//           };
+//         }
+//       | BothShipPositions
+//     )
+//   ][];
+//   salvo: boolean;
+//   playerBoard: Board;
+//   enemyBoard: Board;
+// }
 
-export type SaveFile = GameFile[];
+export type SaveFile = GameSaveFile[];

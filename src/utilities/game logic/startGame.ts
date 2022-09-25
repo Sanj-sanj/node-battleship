@@ -1,24 +1,52 @@
 import print from "../print.js";
 import gameLoop from "./gameLoop.js";
 import setupGameState from "../game state/gameState.js";
-import { GameFile } from "../../types/GameTypes.js";
+import { GameSaveFile, GameState } from "../../types/GameTypes.js";
 import saveGameState from "./saveGameState.js";
+import loadGameState from "./loadGameState.js";
 
 export default async function startGame(
-  salvo: boolean,
+  salvoEnabled: boolean,
   playerName: string,
-  id: number = Math.floor(Math.random() * 100000000)
+  id: number = Math.floor(Math.random() * 100000000),
+  loadPreviousGame = false
 ) {
   //  to-do add a  function loadGameState somewhere, to pickup last game saved
   //  to-do add a  function saveTOHighscores to save completed games and time?
-
-  const state = setupGameState();
-  const gameState = await gameLoop(state, salvo);
-  const gameFile: GameFile = {
-    ...gameState,
-    salvo,
+  let state: GameState;
+  if (loadPreviousGame) {
+    // load the previous save here
+    //then pass the results of the state into setupGameState()
+    const lemon = await loadGameState(id);
+    const previousState = lemon.state;
+    const {
+      enemyTurns,
+      playerTurns,
+      positions,
+      salvo,
+      shipsHit,
+      shipsState,
+      shotsFiredHistory,
+      lastBuiltBoard,
+    } = previousState;
+    state = setupGameState(
+      playerTurns,
+      enemyTurns,
+      salvo,
+      positions,
+      shipsState,
+      shipsHit,
+      shotsFiredHistory
+    );
+  } else {
+    state = setupGameState();
+  }
+  const gameState = await gameLoop(state, salvoEnabled);
+  const gameFile: GameSaveFile = {
     playerName,
     ID: id,
+    ...gameState,
+    salvoEnabled,
   };
   if (state.get().gameHasEnded) {
     //below logic  shold become a return statement or change this fnc return statement

@@ -8,6 +8,8 @@ import {
   XYCoords,
   GameState,
   Salvo,
+  Board,
+  BothBoards,
 } from "../../types/GameTypes";
 
 export default function setupGameState(
@@ -20,12 +22,16 @@ export default function setupGameState(
   positions: BothShipPositions = { player: [], enemy: [] },
   shipsState: BothShipsStates = { player: [], enemy: [] },
   shipsHit: BothShipsCoords = { player: [], enemy: [] },
-  shotsFiredHistory: BothShipsCoords = { player: [], enemy: [] }
+  shotsFiredHistory: BothShipsCoords = { player: [], enemy: [] },
+  lastBuiltBoard: BothBoards = { player: [], enemy: [] }
 ): GameState {
   let playerHasWon = false;
   let gameHasEnded = false;
   let isPlayersTurn = true;
 
+  function saveBoards(boardTable: { player: Board; enemy: Board }) {
+    lastBuiltBoard = boardTable;
+  }
   function updateSalvoTotal(name: TurnPlayer, sunkShips: number) {
     salvo[name].remaining = salvo[name].max - sunkShips;
   }
@@ -71,6 +77,7 @@ export default function setupGameState(
       playerHasWon,
       gameHasEnded,
       salvo,
+      lastBuiltBoard,
       checkIfPreviouslyHitTile,
     };
   }
@@ -85,6 +92,7 @@ export default function setupGameState(
       updatePositions,
       updateShipStates,
       swapTurn,
+      saveBoards,
     };
   }
   return {

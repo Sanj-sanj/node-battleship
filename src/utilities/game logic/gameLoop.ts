@@ -1,8 +1,7 @@
 import {
   Board,
-  BothShipPositions,
-  BothShipsCoords,
-  BothShipsStates,
+  GameSession,
+  GameSessionState,
   GameState,
   XYCoords,
 } from "../../types/GameTypes";
@@ -31,30 +30,7 @@ export default async function gameLoop(
     "enemy"
   ),
   guessBoard: Board = createEmptyBoard()
-): Promise<{
-  state: [
-    string,
-    (
-      | number
-      | BothShipsStates
-      | BothShipsCoords
-      | {
-          player: {
-            max: number;
-            remaining: number;
-          };
-          enemy: {
-            max: number;
-            remaining: number;
-          };
-        }
-      | BothShipPositions
-    )
-  ][];
-  salvoEnabled: boolean;
-  playerBoard: Board;
-  enemyBoard: Board;
-}> {
+): Promise<GameSession> {
   console.clear();
   const playersTurn = state.get().isPlayersTurn;
   const opponentBoard = playersTurn ? enemyBoard : playerBoard;
@@ -92,7 +68,7 @@ export default async function gameLoop(
       state.modify().updateGameHasEnded(true);
       print("\nThanks for playing");
 
-      const stringyState = Object.entries({
+      const gameState = Object.entries({
         playerTurns,
         enemyTurns,
         salvo,
@@ -100,9 +76,11 @@ export default async function gameLoop(
         shipsState,
         shipsHit,
         shotsFiredHistory,
-      }).map((v) => v);
+      }).reduce((acc, curr) => {
+        return (acc = { ...acc, [curr[0]]: curr[1] });
+      }, {}) as GameSessionState;
       return {
-        state: stringyState,
+        state: gameState,
         salvoEnabled,
         playerBoard,
         enemyBoard,
@@ -146,7 +124,7 @@ export default async function gameLoop(
     state.modify().updatePlayerHasWon(true);
     state.modify().updateGameHasEnded(true);
 
-    const stringyState = Object.entries({
+    const gameState = Object.entries({
       playerTurns,
       enemyTurns,
       salvo,
@@ -154,9 +132,11 @@ export default async function gameLoop(
       shipsState,
       shipsHit,
       shotsFiredHistory,
-    }).map((v) => v);
+    }).reduce((acc, curr) => {
+      return (acc = { ...acc, [curr[0]]: curr[1] });
+    }, {}) as GameSessionState;
     return {
-      state: stringyState,
+      state: gameState,
       salvoEnabled,
       playerBoard,
       enemyBoard,

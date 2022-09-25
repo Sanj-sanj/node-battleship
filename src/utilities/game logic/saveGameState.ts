@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "fs";
-import { GameFile, SaveFile } from "../../types/GameTypes";
+import { GameSaveFile, SaveFile } from "../../types/GameTypes";
 
-export default function saveGameState(gameFile: GameFile, id: number) {
+export default function saveGameState(gameFile: GameSaveFile, id: number) {
   let saveFiles: SaveFile;
   try {
     saveFiles = JSON.parse(
