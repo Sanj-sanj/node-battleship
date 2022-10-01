@@ -15,8 +15,8 @@ export default async function userMenuSelect() {
       name: "titleSelection",
       message: "Please select an option",
       choices: [
-        "Start Game",
-        "Load Game*",
+        "New Game",
+        "Load Game",
         "Highscores*",
         "Instructions",
         "Quit Application",

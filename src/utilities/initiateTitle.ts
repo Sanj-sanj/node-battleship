@@ -21,7 +21,7 @@ export default async function initiateTitle() {
   const { titleSelection, playerName, enableSalvo } = result;
 
   switch (titleSelection) {
-    case "Start Game":
+    case "New Game":
       new Promise((res) =>
         setTimeout(
           () => res(startGame(enableSalvo as boolean, playerName as string)),
