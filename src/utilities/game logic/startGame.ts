@@ -1,7 +1,7 @@
 import print from "../print.js";
 import gameLoop from "./gameLoop.js";
 import setupGameState from "../game state/gameState.js";
-import { GameSaveFile, GameState } from "../../types/GameTypes.js";
+import { GameSaveFile, GameSession, GameState, LastBuiltBoards } from "../../types/GameTypes.js";
 import saveGameState from "./saveGameState.js";
 import loadGameState from "./loadGameState.js";
 
@@ -14,11 +14,13 @@ export default async function startGame(
   //  to-do add a  function loadGameState somewhere, to pickup last game saved
   //  to-do add a  function saveTOHighscores to save completed games and time?
   let state: GameState;
+  let boardHistory: null| LastBuiltBoards = null;
+  let gameState: GameSession;
   if (loadPreviousGame) {
     // load the previous save here
     //then pass the results of the state into setupGameState()
-    const lemon = await loadGameState(id);
-    const previousState = lemon.state;
+    const saveFile = await loadGameState(id);
+    const previousState = saveFile.state;
     const {
       enemyTurns,
       playerTurns,
@@ -27,8 +29,8 @@ export default async function startGame(
       shipsHit,
       shipsState,
       shotsFiredHistory,
-      lastBuiltBoard,
     } = previousState;
+    boardHistory = saveFile.boards
     state = setupGameState(
       playerTurns,
       enemyTurns,
@@ -36,12 +38,19 @@ export default async function startGame(
       positions,
       shipsState,
       shipsHit,
-      shotsFiredHistory
+      shotsFiredHistory,
+      boardHistory
     );
   } else {
     state = setupGameState();
   }
-  const gameState = await gameLoop(state, salvoEnabled);
+  if(boardHistory) {
+    //load game using previous state
+    gameState = await gameLoop(state, salvoEnabled, boardHistory.player, boardHistory.enemy, boardHistory.guessBoard)
+  } else {
+    //let game build new state
+    gameState = await gameLoop(state, salvoEnabled);
+  }
   const gameFile: GameSaveFile = {
     playerName,
     ID: id,

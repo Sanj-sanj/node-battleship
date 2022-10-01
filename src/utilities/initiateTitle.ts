@@ -27,6 +27,7 @@ export default async function initiateTitle() {
           () => res(startGame(enableSalvo as boolean, playerName as string)),
           1250
         )
+        // game finished, restart title.
       ).then(() => setTimeout(() => initiateTitle(), 2000));
       break;
 
@@ -51,8 +52,12 @@ export default async function initiateTitle() {
             1250
           )
         ).then(() => {
+        // game finished, restart title.
           setTimeout(() => initiateTitle(), 2000);
         });
+      } else {
+        // No save files found, restart title.
+        setTimeout(() => initiateTitle(), 2000)
       }
       break;
     }

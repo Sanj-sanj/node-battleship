@@ -7,7 +7,7 @@ export default async function prompWhichLoadToResume(): Promise<{
   salvoEnabled: boolean;
   playerName: string;
   ID: number;
-}> {
+} | null> {
   const saveFiles = loadGameFiles();
   if (saveFiles) {
     const saveFileChoices = {
@@ -22,9 +22,8 @@ export default async function prompWhichLoadToResume(): Promise<{
       if (file) {
         const { salvoEnabled, playerName, ID } = file;
         return { salvoEnabled, playerName, ID };
-      } else return prompWhichLoadToResume();
+      } else return null;
     });
-  } else {
-    return prompWhichLoadToResume();
-  }
+  } 
+  return null
 }

@@ -1,5 +1,6 @@
 import { readFileSync } from "fs";
 import { SaveFile } from "../../types/GameTypes";
+import print from "../print.js";
 
 export default function loadGameFiles() {
   let saveFiles: SaveFile;
@@ -9,6 +10,6 @@ export default function loadGameFiles() {
     ) as SaveFile;
     return saveFiles;
   } catch {
-    console.log("whoops something went wrong, lets just ignore that!");
+    print("No save files were found! \nTry starting a new game instead.");
   }
 }

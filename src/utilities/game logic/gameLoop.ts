@@ -46,7 +46,8 @@ export default async function gameLoop(
       : "Enemy's turn"
   );
   // [ [ ---> NOTE <--- ] ] : printBoards(a, b = true) enables debugging
-  printBoards([guessBoard, playerBoard, enemyBoard], true);
+  // if debuggin is enabled, the saveFile will save the debugging bord (the player's board with no hitmarkers), this is unintended for actual game 
+  printBoards([guessBoard, playerBoard, enemyBoard]);
 
   const inputedCoords = [] as XYCoords[];
   const {
@@ -82,8 +83,7 @@ export default async function gameLoop(
       return {
         state: gameState,
         salvoEnabled,
-        playerBoard,
-        enemyBoard,
+        boards: {player: playerBoard, enemy: enemyBoard, guessBoard: guessBoard}
       };
     } else {
       inputedCoords.push(...playerInputs);
@@ -138,8 +138,8 @@ export default async function gameLoop(
     return {
       state: gameState,
       salvoEnabled,
-      playerBoard,
-      enemyBoard,
+      boards: {player: playerBoard, enemy: enemyBoard, guessBoard: guessBoard}
+
     };
   }
 

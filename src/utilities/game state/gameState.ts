@@ -9,8 +9,9 @@ import {
   GameState,
   Salvo,
   Board,
-  BothBoards,
+  LastBuiltBoards,
 } from "../../types/GameTypes";
+import createEmptyBoard from '../game logic/board/createEmptyBoard.js'
 
 export default function setupGameState(
   playerTurns = 0,
@@ -23,14 +24,14 @@ export default function setupGameState(
   shipsState: BothShipsStates = { player: [], enemy: [] },
   shipsHit: BothShipsCoords = { player: [], enemy: [] },
   shotsFiredHistory: BothShipsCoords = { player: [], enemy: [] },
-  lastBuiltBoard: BothBoards = { player: [], enemy: [] }
+  boards: LastBuiltBoards = { player: createEmptyBoard(), enemy: createEmptyBoard(), guessBoard: createEmptyBoard()}
 ): GameState {
   let playerHasWon = false;
   let gameHasEnded = false;
   let isPlayersTurn = true;
 
-  function saveBoards(boardTable: { player: Board; enemy: Board }) {
-    lastBuiltBoard = boardTable;
+  function saveBoards(bothBoards: { player: Board; enemy: Board, guessBoard: Board }) {
+    boards = bothBoards;
   }
   function updateSalvoTotal(name: TurnPlayer, sunkShips: number) {
     salvo[name].remaining = salvo[name].max - sunkShips;
@@ -77,7 +78,7 @@ export default function setupGameState(
       playerHasWon,
       gameHasEnded,
       salvo,
-      lastBuiltBoard,
+      boards,
       checkIfPreviouslyHitTile,
     };
   }

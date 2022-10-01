@@ -48,7 +48,7 @@ export type BothShipPositions = {
   player: ShipPlotPoints[];
   enemy: ShipPlotPoints[];
 };
-export type BothBoards = { player: Board; enemy: Board };
+export type LastBuiltBoards = { player: Board; enemy: Board, guessBoard: Board };
 export interface GameState {
   modify: () => {
     updateSalvoTotal: (name: TurnPlayer, sunkShips: number) => void;
@@ -60,7 +60,7 @@ export interface GameState {
     updatePositions: (item: XYCoords[], name: TurnPlayer) => void;
     updateShipStates: (sunkShips: ShipState[], name: TurnPlayer) => void;
     swapTurn: () => void;
-    saveBoards: (Boards: { player: Board; enemy: Board }) => void;
+    saveBoards: (Boards: { player: Board; enemy: Board, guessBoard: Board }) => void;
   };
   get: () => {
     playerTurns: number;
@@ -72,7 +72,7 @@ export interface GameState {
     isPlayersTurn: boolean;
     playerHasWon: boolean;
     gameHasEnded: boolean;
-    lastBuiltBoards: BothBoards;
+    boards: LastBuiltBoards;
     salvo: {
       player: { max: number; remaining: number };
       enemy: { max: number; remaining: number };
@@ -88,8 +88,7 @@ export interface GameSaveFile {
   playerName: string;
   ID: number;
   state: GameSessionState;
-  playerBoard: Board;
-  enemyBoard: Board;
+  boards: LastBuiltBoards;
   salvoEnabled: boolean;
 }
 export type GameSessionState = {
@@ -104,35 +103,7 @@ export type GameSessionState = {
 export interface GameSession {
   state: GameSessionState;
   salvoEnabled: boolean;
-  playerBoard: Board;
-  enemyBoard: Board;
+  boards: LastBuiltBoards
 }
-// export interface GameFile {
-//   playerName: string;
-//   ID: number;
-//   state: [
-//     [name]: string,
-//     string,
-//     (
-//       | number
-//       | BothShipsStates
-//       | BothShipsCoords
-//       | {
-//           player: {
-//             max: number;
-//             remaining: number;
-//           };
-//           enemy: {
-//             max: number;
-//             remaining: number;
-//           };
-//         }
-//       | BothShipPositions
-//     )
-//   ][];
-//   salvo: boolean;
-//   playerBoard: Board;
-//   enemyBoard: Board;
-// }
 
 export type SaveFile = GameSaveFile[];
