@@ -14,7 +14,7 @@ export interface InquirerTitleSelectAnswers extends Answers {
 
 export type GameMenuChoices =
   | "Start Game"
-  | "Load Game*"
+  | "Load Game"
   | "Highscores*"
   | "Instructions"
   | "Quit Application";

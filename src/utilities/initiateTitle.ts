@@ -35,7 +35,7 @@ export default async function initiateTitle() {
       showInstructions(initiateTitle);
       break;
 
-    case "Load Game*": {
+    case "Load Game": {
       const loadFile = await prompWhichLoadToResume();
       if (loadFile) {
         new Promise((res) =>
