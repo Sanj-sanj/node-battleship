@@ -1,12 +1,12 @@
 import { readFileSync, writeFileSync } from "fs";
-import { GameSaveFile, SaveFile } from "../../types/GameTypes";
+import { GameSaveFile, RawSaveFiles } from "../../types/GameTypes";
 
 export default function saveGameState(gameFile: GameSaveFile, id: number) {
-  let saveFiles: SaveFile;
+  let saveFiles: RawSaveFiles;
   try {
     saveFiles = JSON.parse(
       readFileSync("./saves/saveFile.json", "utf-8")
-    ) as SaveFile;
+    ) as RawSaveFiles;
     const fileIndex = saveFiles.findIndex((file) => file.ID === id);
     if (fileIndex === -1) saveFiles.push(gameFile);
     else saveFiles[fileIndex] = gameFile;

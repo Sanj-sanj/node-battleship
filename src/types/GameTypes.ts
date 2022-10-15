@@ -106,4 +106,4 @@ export interface GameSession {
   boards: LastBuiltBoards
 }
 
-export type SaveFile = GameSaveFile[];
+export type RawSaveFiles = GameSaveFile[];
